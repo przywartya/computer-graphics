@@ -59,28 +59,56 @@ filters_database = {
 
 }
 
-SECOND_PART = False
+SECOND_PART = True
 
 
 class WindowInter:
     entries = []
     top, bottom, mode, kernel_choice = None, None, None, None
+    offset, divisor = None, None
 
     def __init__(self):
         self.window = tk.Tk()
         self.window.title("Computer Graphics 1")
-        self.window.geometry("300x300")
+        self.window.geometry("300x400")
         self.window.configure(background='grey')
         self.panel3 = tk.Label(self.window)
         self.panel3.pack(side="left")
 
+    def button_filter_handler(self, key):
+        self.show_images(filters_database[key])
+
+    def create_readymade_filter_buttons(self):
+        from functools import partial
+        panel5 = tk.Label(self.window)
+        for key in filters_database:
+            command_with_arg = partial(self.button_filter_handler, key)
+            button = tk.Button(panel5, text=key, command=command_with_arg)
+            button.pack()
+        panel5.pack(side='right')
+
     def show_buttons(self):
+        self.create_readymade_filter_buttons()
         panel4 = tk.Label(self.window)
         button3 = tk.Button(panel4, text="3x3", command=self.button3)
         button5 = tk.Button(panel4, text="5x5", command=self.button5)
         button7 = tk.Button(panel4, text="7x7", command=self.button7)
         button9 = tk.Button(panel4, text="9x9", command=self.button9)
         button25 = tk.Button(panel4, text="25x25", command=self.button25)
+        offset_label = tk.StringVar()
+        offset_label.set("Offset")
+        label_dir = tk.Label(self.window, textvariable=offset_label, width=5)
+        label_dir.pack()
+        self.offset = tk.Entry(self.window, width=5)
+        self.offset.pack()
+
+        divisor_label = tk.StringVar()
+        divisor_label.set("Divisor")
+        label_dir = tk.Label(self.window, textvariable=divisor_label, width=5)
+        label_dir.pack()
+        self.divisor = tk.Entry(self.window, width=5)
+        self.divisor.pack()
+
         button3.pack()
         button5.pack()
         button7.pack()
@@ -136,7 +164,10 @@ class WindowInter:
         window.geometry("600x400")
         window.configure(background='grey')
 
-        filtered = convolve(self.top, kernel)
+        offset = int(self.offset.get() or 0)
+        divisor = int(self.divisor.get() or 0)
+
+        filtered = convolve(self.top, kernel, offset, divisor)
         raw = to_tkimage(self.top)
         filtered = to_tkimage(filtered)
 
@@ -187,17 +218,19 @@ def contrast(img, value):
     return img
 
 
-def convolve(image, kernel):
+def convolve(image, kernel, offset=0, divisor=None):
     height, width = image.shape
     k_height, k_width = kernel.shape
     pad = int(k_height / 2)
     padded_image = repeat_borders(image, kernel)
+    if not divisor:
+        # divisor = kernel.size
+        divisor = kernel.sum() or 1
     output = np.zeros((height, width), dtype="uint8")
     for i in range(pad, height+pad):
         for j in range(pad, width+pad):
             roi = padded_image[(i-pad):(i+pad+1), (j-pad):(j+pad+1)]
-            divisor = kernel.sum() or 1
-            i_out = (roi * kernel).sum()/divisor
+            i_out = offset + ((roi * kernel).sum()/divisor)
             k = max(0, min(255, i_out))
             output[i - pad, j - pad] = int(k)
     return output
@@ -239,7 +272,7 @@ def main():
         # grayscale = set_brightness(grayscale, 15)
         # grayscale = contrast(grayscale, 150)
         # repeat_borders(grayscale)
-        filtered = convolve(grayscale, filters_database['eastemboss'])
+        filtered = convolve(grayscale, filters_database['blur'], divisor=25)
         raw = to_tkimage(grayscale)
 
         window = tk.Tk()
@@ -254,4 +287,8 @@ def main():
         panel1.pack(side="top", fill="both", expand="yes")
         panel2.pack(side="bottom", fill="both", expand="yes")
         window.mainloop()
+
+
 main()
+
+
