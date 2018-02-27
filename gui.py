@@ -66,17 +66,52 @@ class WindowInter:
     entries = []
     top, bottom, mode, kernel_choice = None, None, None, None
     offset, divisor = None, None
+    contrast, brightness = None, None
+    k_height, k_width, anchor_row, anchor_col = None, None, None, None
 
     def __init__(self):
         self.window = tk.Tk()
         self.window.title("Computer Graphics 1")
-        self.window.geometry("300x400")
+        self.window.geometry("500x500")
         self.window.configure(background='grey')
         self.panel3 = tk.Label(self.window)
         self.panel3.pack(side="left")
 
     def button_filter_handler(self, key):
         self.show_images(filters_database[key])
+
+    def function_filters_handler(self, method):
+        window = tk.Tk()
+        window.title("Computer Graphics 1")
+        window.geometry("600x600")
+        window.configure(background='grey')
+        raw = self.top.copy()
+        raw = to_tkimage(raw)
+        filtered = to_tkimage(method())
+        tkimg1 = ImageTk.PhotoImage(raw, master=window)
+        tkimg2 = ImageTk.PhotoImage(filtered, master=window)
+        panel1 = tk.Label(window, image=tkimg1)
+        panel2 = tk.Label(window, image=tkimg2)
+        panel1.pack(side="top", fill="both", expand="yes")
+        panel2.pack(side="bottom", fill="both", expand="yes")
+        window.mainloop()
+
+    def create_function_filters_buttons(self):
+        from functools import partial
+        panel5 = tk.Label(self.window)
+
+        command_with_arg = partial(self.function_filters_handler, self.set_contrast)
+        button = tk.Button(panel5, text="Contrast", command=command_with_arg)
+        button.pack()
+
+        command_with_arg = partial(self.function_filters_handler, self.set_brightness)
+        button = tk.Button(panel5, text="Brightness", command=command_with_arg)
+        button.pack()
+
+        command_with_arg = partial(self.function_filters_handler, self.inversion)
+        button = tk.Button(panel5, text="Inversion", command=command_with_arg)
+        button.pack()
+        panel5.pack(side='bottom')
 
     def create_readymade_filter_buttons(self):
         from functools import partial
@@ -87,71 +122,108 @@ class WindowInter:
             button.pack()
         panel5.pack(side='right')
 
+    def create_input(self, name):
+        label = tk.StringVar()
+        label.set(name)
+        label_dir = tk.Label(self.window, textvariable=label, width=10)
+        label_dir.pack()
+
     def show_buttons(self):
         self.create_readymade_filter_buttons()
-        panel4 = tk.Label(self.window)
-        button3 = tk.Button(panel4, text="3x3", command=self.button3)
-        button5 = tk.Button(panel4, text="5x5", command=self.button5)
-        button7 = tk.Button(panel4, text="7x7", command=self.button7)
-        button9 = tk.Button(panel4, text="9x9", command=self.button9)
-        button25 = tk.Button(panel4, text="25x25", command=self.button25)
-        offset_label = tk.StringVar()
-        offset_label.set("Offset")
-        label_dir = tk.Label(self.window, textvariable=offset_label, width=5)
-        label_dir.pack()
+        self.create_function_filters_buttons()
+        self.create_input("Offset")
         self.offset = tk.Entry(self.window, width=5)
         self.offset.pack()
-
-        divisor_label = tk.StringVar()
-        divisor_label.set("Divisor")
-        label_dir = tk.Label(self.window, textvariable=divisor_label, width=5)
-        label_dir.pack()
+        self.create_input("Divisor")
         self.divisor = tk.Entry(self.window, width=5)
         self.divisor.pack()
+        self.create_input("Contrast")
+        self.contrast = tk.Entry(self.window, width=5)
+        self.contrast.pack()
+        self.create_input("Brightness")
+        self.brightness = tk.Entry(self.window, width=5)
+        self.brightness.pack()
 
-        button3.pack()
-        button5.pack()
-        button7.pack()
-        button9.pack()
-        button25.pack()
+        panel4 = tk.Label(self.window)
+        label = tk.StringVar()
+        label.set("Kernel width")
+        label_dir = tk.Label(panel4, textvariable=label, width=20)
+        label_dir.pack()
+        self.k_width = tk.Entry(panel4, width=5)
+        self.k_width.pack()
+        label = tk.StringVar()
+        label.set("Kernel height")
+        label_dir = tk.Label(panel4, textvariable=label, width=20)
+        label_dir.pack()
+        self.k_height = tk.Entry(panel4, width=5)
+        self.k_height.pack()
+        label = tk.StringVar()
+        label.set("Anchor row")
+        label_dir = tk.Label(panel4, textvariable=label, width=20)
+        label_dir.pack()
+        self.anchor_row = tk.Entry(panel4, width=5)
+        self.anchor_row.pack()
+        label = tk.StringVar()
+        label.set("Anchor column")
+        label_dir = tk.Label(panel4, textvariable=label, width=20)
+        label_dir.pack()
+        self.anchor_col = tk.Entry(panel4, width=5)
+        self.anchor_col.pack()
+
+        button = tk.Button(panel4, text="Create grid", command=self.create_grid)
+        button.pack()
         panel4.pack(side="left")
 
-    def button3(self):
-        self.kernel_choice = 3
-        self.create_grid()
+    def set_brightness(self):
+        img = self.top.copy()
+        brightness = int(self.brightness.get() or 0)
+        for i in range(0, img.shape[0]):
+            for j in range(0, img.shape[1]):
+                current_value = img[i, j]
+                img[i, j] = min(255, current_value + brightness)
+        return img
 
-    def button5(self):
-        self.kernel_choice = 5
-        self.create_grid()
+    def inversion(self):
+        img = self.top.copy()
+        for i in range(0, img.shape[0]):
+            for j in range(0, img.shape[1]):
+                img[i, j] = 255 - img[i, j]
+        return img
 
-    def button7(self):
-        self.kernel_choice = 7
-        self.create_grid()
-
-    def button9(self):
-        self.kernel_choice = 9
-        self.create_grid()
-
-    def button25(self):
-        self.kernel_choice = 25
-        self.create_grid()
+    def set_contrast(self):
+        img = self.top.copy()
+        contrast = int(self.contrast.get() or 0)
+        for i in range(0, img.shape[0]):
+            for j in range(0, img.shape[1]):
+                current_value = img[i, j]
+                img[i, j] = max(0, min(255, 128 + contrast * (current_value - 128)))
+        return img
 
     def create_grid(self):
+        self.k_width = int(self.k_width.get() or 0)
+        self.k_height = int(self.k_height.get() or 0)
+        self.anchor_row = int(self.anchor_row.get() or 0) - 1
+        self.anchor_col = int(self.anchor_col.get() or 0) - 1
         self.entries = []
         for widget in self.panel3.winfo_children():
             widget.destroy()
+        columns = 0
+        while columns < self.k_width + 1:
+            self.panel3.columnconfigure(columns, weight=1)
+            columns += 1
         rows = 0
-        while rows < self.kernel_choice + 1:
+        while columns < self.k_height + 1:
             self.panel3.rowconfigure(rows, weight=1)
-            self.panel3.columnconfigure(rows, weight=1)
             rows += 1
-        for i in range(0, self.kernel_choice):
-            for j in range(0, self.kernel_choice):
+        for i in range(0, self.k_height):
+            for j in range(0, self.k_width):
                 entry_widget = tk.Entry(self.panel3, width=2)
                 entry_widget.grid(row=i, column=j)
+                if i == self.anchor_row and j == self.anchor_col:
+                    entry_widget.config({"background": "Green"})
                 self.entries.append(entry_widget)
         submit_button = tk.Button(self.panel3, command=self.button)
-        submit_button.grid(row=self.kernel_choice + 1)
+        submit_button.grid(row=self.k_height + 1)
 
     def show_tk_image(self, top):
         self.top = top
@@ -165,9 +237,11 @@ class WindowInter:
         window.configure(background='grey')
 
         offset = int(self.offset.get() or 0)
-        divisor = int(self.divisor.get() or 0)
+        divisor = int(self.divisor.get() or 1)
+        anchor = (self.anchor_col, self.anchor_row)
 
-        filtered = convolve(self.top, kernel, offset, divisor)
+        # filtered = convolve(self.top, kernel, offset, divisor)
+        filtered = self.new_convolve(self.top, kernel, offset, divisor, anchor)
         raw = to_tkimage(self.top)
         filtered = to_tkimage(filtered)
 
@@ -180,41 +254,41 @@ class WindowInter:
         window.mainloop()
 
     def button(self):
-        # self.show_images()
         input_numbers = [int(entry.get() or 0) for entry in self.entries]
         arr = np.array(input_numbers)
-        arr = arr.reshape((self.kernel_choice, self.kernel_choice))
+        arr = arr.reshape((self.k_height, self.k_width))
         self.show_images(arr)
 
+    def new_convolve(self, image, kernel, offset, divisor, anchor=None):
+        height, width = image.shape
+        k_height, k_width = kernel.shape
+        result = image.copy()
+        for y in range(0, height):
+            for x in range(0, width):
+                val = 0
+                for j in range(0, k_height):
+                    for i in range(0, k_width):
+                        mx = x + i - anchor[0]
+                        my = y + j - anchor[1]
+                        if mx < 0:
+                            mx = 0
+                        else:
+                            if mx >= width:
+                                mx = width - 1
+                        if my < 0:
+                            my = 0
+                        else:
+                            if my >= height:
+                                my = height - 1
+                        val += kernel[j, i] * image[my, mx]
+                val = max(0, min(255, offset + (val / divisor)))
+                result[y, x] = val
+        return result
 
 def resize_image(img):
     wpercent = (300/float(img.size[0]))
     hsize = int((float(img.size[1])*float(wpercent)))
     img = img.resize((300, hsize), Image.ANTIALIAS)
-    return img
-
-
-def set_brightness(img, value):
-    for i in range(0, img.shape[0]):
-        for j in range(0, img.shape[1]):
-            current_value = img[i, j]
-            img[i, j] = min(255, current_value + value)
-    return img
-
-
-def inversion(img):
-    for i in range(0, img.shape[0]):
-        for j in range(0, img.shape[1]):
-            img[i, j] = 255 - img[i, j]
-    return img
-
-
-def contrast(img, value):
-    factor = (259 * (value + 255)) / (255 * (259 - value))
-    for i in range(0, img.shape[0]):
-        for j in range(0, img.shape[1]):
-            current_value = img[i, j]
-            img[i, j] = max(0, min(255, 128 + factor * (current_value - 128)))
     return img
 
 
@@ -267,28 +341,5 @@ def main():
     if SECOND_PART:
         tkobj = WindowInter()
         tkobj.show_tk_image(grayscale)
-    else:
-        # grayscale = inversion(grayscale)
-        # grayscale = set_brightness(grayscale, 15)
-        # grayscale = contrast(grayscale, 150)
-        # repeat_borders(grayscale)
-        filtered = convolve(grayscale, filters_database['blur'], divisor=25)
-        raw = to_tkimage(grayscale)
-
-        window = tk.Tk()
-        window.title("Computer Graphics 1")
-        window.geometry("600x400")
-        window.configure(background='grey')
-        filtered = to_tkimage(filtered)
-        tkimg1 = ImageTk.PhotoImage(raw, master=window)
-        tkimg2 = ImageTk.PhotoImage(filtered, master=window)
-        panel1 = tk.Label(window, image=tkimg1)
-        panel2 = tk.Label(window, image=tkimg2)
-        panel1.pack(side="top", fill="both", expand="yes")
-        panel2.pack(side="bottom", fill="both", expand="yes")
-        window.mainloop()
-
-
 main()
-
 
