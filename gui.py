@@ -5,17 +5,18 @@ import numpy as np
 
 filters_database = {
     'blur': np.array((
-        [1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1]), dtype="int"),
+        [1/25, 1/25, 1/25, 1/25, 1/25],
+        [1/25, 1/25, 1/25, 1/25, 1/25],
+        [1/25, 1/25, 1/25, 1/25, 1/25],
+        [1/25, 1/25, 1/25, 1/25, 1/25],
+        [1/25, 1/25, 1/25, 1/25, 1/25],
+    ), dtype="float"),
     'gaussian': np.array((
-        [0, 1, 2, 1, 0],
-        [1, 4, 8, 4, 1],
-        [2, 8, 16, 8, 2],
-        [1, 4, 8, 4, 1],
-        [0, 1, 2, 1, 0]), dtype="int"),
+        [0, 1/25, 2/25, 1/25, 0],
+        [1/25, 4/25, 8/25, 4/25, 1/25],
+        [2/25, 8/25, 16/25, 8/25, 2/25],
+        [1/25, 4/25, 8/25, 4/25, 1/25],
+        [0, 1/25, 2/25, 1/25, 0]), dtype="float"),
     'sharpen1': np.array((
         [0, -1, 0],
         [-1, 5, -1],
@@ -24,15 +25,15 @@ filters_database = {
         [-1, -1, -1],
         [-1, 9, -1],
         [-1, -1, -1]), dtype="int"),
-    'Hedgedetect': np.array((
+    'Hedgedetect(set offset=127)': np.array((
         [0, -1, 0],
         [0, 1, 0],
         [0, 0, 0]), dtype="int"),
-    'Vedgedetect': np.array((
+    'Vedgedetect(set offset=127)': np.array((
         [0, 0, 0],
         [-1, 1, 0],
         [0, 0, 0]), dtype="int"),
-    'Dedgedetect': np.array((
+    'Dedgedetect(set offset=127)': np.array((
         [-1, 0, 0],
         [0, 1, 0],
         [0, 0, 0]), dtype="int"),
@@ -72,12 +73,19 @@ class WindowInter:
     def __init__(self):
         self.window = tk.Tk()
         self.window.title("Computer Graphics 1")
-        self.window.geometry("500x500")
+        self.window.geometry("600x600")
         self.window.configure(background='grey')
         self.panel3 = tk.Label(self.window)
         self.panel3.pack(side="left")
 
     def button_filter_handler(self, key):
+        middle = int((len(filters_database[key][0]) - 1) / 2)
+        (self.anchor_col, self.anchor_row) = (middle, middle)
+        (self.k_width, self.k_height) = filters_database[key].shape
+        self.create_grid()
+        filts = filters_database[key].flatten()
+        for index, entry in enumerate(self.entries):
+            entry.insert(1, str(filts[index]))
         self.show_images(filters_database[key])
 
     def function_filters_handler(self, method):
@@ -193,17 +201,22 @@ class WindowInter:
     def set_contrast(self):
         img = self.top.copy()
         contrast = int(self.contrast.get() or 0)
+        F = (259*(contrast + 255))/(255*(259-contrast))
         for i in range(0, img.shape[0]):
             for j in range(0, img.shape[1]):
                 current_value = img[i, j]
-                img[i, j] = max(0, min(255, 128 + contrast * (current_value - 128)))
+                img[i, j] = max(0, min(255, 128 + (F*(current_value - 128))))
         return img
 
     def create_grid(self):
-        self.k_width = int(self.k_width.get() or 0)
-        self.k_height = int(self.k_height.get() or 0)
-        self.anchor_row = int(self.anchor_row.get() or 0) - 1
-        self.anchor_col = int(self.anchor_col.get() or 0) - 1
+        if type(self.k_width) is not int:
+            self.k_width = int(self.k_width.get() or 0)
+        if type(self.k_height) is not int:
+            self.k_height = int(self.k_height.get() or 0)
+        if type(self.anchor_row) is not int:
+            self.anchor_row = int(self.anchor_row.get() or 0) - 1
+        if type(self.anchor_col) is not int:
+            self.anchor_col = int(self.anchor_col.get() or 0) - 1
         self.entries = []
         for widget in self.panel3.winfo_children():
             widget.destroy()
@@ -217,7 +230,7 @@ class WindowInter:
             rows += 1
         for i in range(0, self.k_height):
             for j in range(0, self.k_width):
-                entry_widget = tk.Entry(self.panel3, width=2)
+                entry_widget = tk.Entry(self.panel3, width=3)
                 entry_widget.grid(row=i, column=j)
                 if i == self.anchor_row and j == self.anchor_col:
                     entry_widget.config({"background": "Green"})
