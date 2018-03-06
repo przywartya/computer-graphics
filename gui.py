@@ -60,23 +60,29 @@ filters_database = {
 
 }
 
-SECOND_PART = True
-
 
 class WindowInter:
     entries = []
     top, bottom, mode, kernel_choice = None, None, None, None
     offset, divisor = None, None
-    contrast, brightness = None, None
+    contrast, brightness, gamma = None, None, None
     k_height, k_width, anchor_row, anchor_col = None, None, None, None
 
     def __init__(self):
         self.window = tk.Tk()
+
         self.window.title("Computer Graphics 1")
         self.window.geometry("600x600")
         self.window.configure(background='grey')
         self.panel3 = tk.Label(self.window)
         self.panel3.pack(side="left")
+
+        path = file_dialog()
+        raw = resize_image(Image.open(path))
+        img = np.asarray(raw)
+        img.setflags(write=True)
+        grayscale = img[:, :, 0]
+        self.show_tk_image(grayscale)
 
     def button_filter_handler(self, key):
         middle = int((len(filters_database[key][0]) - 1) / 2)
@@ -107,6 +113,10 @@ class WindowInter:
     def create_function_filters_buttons(self):
         from functools import partial
         panel5 = tk.Label(self.window)
+
+        command_with_arg = partial(self.function_filters_handler, self.set_gamma)
+        button = tk.Button(panel5, text="Gamma", command=command_with_arg)
+        button.pack()
 
         command_with_arg = partial(self.function_filters_handler, self.set_contrast)
         button = tk.Button(panel5, text="Contrast", command=command_with_arg)
@@ -151,6 +161,8 @@ class WindowInter:
         self.create_input("Brightness")
         self.brightness = tk.Entry(self.window, width=5)
         self.brightness.pack()
+        self.gamma = tk.Scale(self.window, from_=0, to=200)
+        self.gamma.pack()
 
         panel4 = tk.Label(self.window)
         label = tk.StringVar()
@@ -181,6 +193,15 @@ class WindowInter:
         button = tk.Button(panel4, text="Create grid", command=self.create_grid)
         button.pack()
         panel4.pack(side="left")
+
+    def set_gamma(self):
+        img = self.top.copy()
+        gamma = float((self.gamma.get()/100) or 0)
+        for i in range(0, img.shape[0]):
+            for j in range(0, img.shape[1]):
+                corrected = 255*((img[i, j]/255)**gamma)
+                img[i, j] = min(255, corrected)
+        return img
 
     def set_brightness(self):
         img = self.top.copy()
@@ -298,6 +319,7 @@ class WindowInter:
                 result[y, x] = val
         return result
 
+
 def resize_image(img):
     wpercent = (300/float(img.size[0]))
     hsize = int((float(img.size[1])*float(wpercent)))
@@ -345,14 +367,15 @@ def repeat_borders(image, kernel):
     return new_image
 
 
+def file_dialog():
+    from tkinter.filedialog import askopenfilename
+    path = askopenfilename(filetypes=(("jpeg files",".jpg"),("all files","*.*")))
+    return path
+
+
 def main():
-    path = "friend.jpg"
-    raw = resize_image(Image.open(path))
-    img = np.asarray(raw)
-    img.setflags(write=True)
-    grayscale = img[:, :, 0]
-    if SECOND_PART:
-        tkobj = WindowInter()
-        tkobj.show_tk_image(grayscale)
+    WindowInter()
+
+
 main()
 
