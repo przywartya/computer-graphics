@@ -21,7 +21,8 @@ class WindowInter:
         self.top = grayscale
         # for n=2 binary image
         # for n=4 four gray levels available: black, gray 33%, gray 66% and white
-        self.bottom = m.convert_to_n_gray_levels(grayscale, 2)
+        # self.bottom = m.convert_to_n_gray_levels(grayscale, 2)
+        self.bottom = m.random_dithering(grayscale, 4)
         self.show_images()
 
     def show_images(self):
