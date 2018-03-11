@@ -23,7 +23,62 @@ def convert_to_n_gray_levels(img, n):
     return np.array(img).reshape(np_shape)
 
 
+def average_dithering(img, n=4):
+    np_shape = img.shape
+    img = np.ndarray.flatten(img)
+    threshold = int(np.mean(img))
+    for pixel in range(0, img.shape[0]):
+        if n == 2:
+            if img[pixel] > threshold:
+                img[pixel] = 1
+            else:
+                img[pixel] = 0
+        elif n == 4:
+            threshold1 = max(0, threshold - int(threshold/2))
+            threshold2 = threshold
+            threshold3 = min(255, threshold + int(threshold/2))
+            if img[pixel] < threshold1:
+                img[pixel] = 0
+            elif threshold2 > img[pixel] >= threshold1:
+                img[pixel] = 1
+            elif threshold3 > img[pixel] >= threshold2:
+                img[pixel] = 2
+            elif img[pixel] >= threshold3:
+                img[pixel] = 3
+        else:
+            raise Exception("Only n=2 or n=4 supported.")
+    return np.array(img).reshape(np_shape)
+
+
+def random_dithering_a(img, n=4):
+    np_shape = img.shape
+    img = np.ndarray.flatten(img)
+    for pixel in range(0, img.shape[0]):
+        threshold = int(randint(1, 255))
+        if n == 2:
+            if img[pixel] > threshold:
+                img[pixel] = 1
+            else:
+                img[pixel] = 0
+        elif n == 4:
+            threshold1 = max(0, threshold - int(threshold/2))
+            threshold2 = threshold
+            threshold3 = min(255, threshold + int(threshold/2))
+            if img[pixel] < threshold1:
+                img[pixel] = 0
+            elif threshold2 > img[pixel] >= threshold1:
+                img[pixel] = 1
+            elif threshold3 > img[pixel] >= threshold2:
+                img[pixel] = 2
+            elif img[pixel] >= threshold3:
+                img[pixel] = 3
+        else:
+            raise Exception("Only n=2 or n=4 supported.")
+    return np.array(img).reshape(np_shape)
+
+
 def random_dithering(img, n):
+    # I can't find how to extend it to multiple levels, it does not work as good as the above random_dither_a.
     conversion_table = {2: 128, 4: 64, 8: 32, 16: 16, 32: 8, 64: 4, 128: 2}
     np_shape = img.shape
     img = np.ndarray.flatten(img)
