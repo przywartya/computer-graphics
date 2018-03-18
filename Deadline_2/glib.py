@@ -1,12 +1,18 @@
-from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 from operator import itemgetter
 
 
-# uniform color quantization
-# number of subdivisions kr, kg, kb along each of RGB axes
-# median cut color quantization — size k of the colour palette
+def my_grayscale(image):
+    grey = np.zeros((image.shape[0], image.shape[1]), dtype=np.uint8)
+    for row_index in range(len(image)):
+        for col_index in range(len(image[row_index])):
+            grey[row_index][col_index] = weighted_average(image[row_index][col_index]) // 3
+    return grey
+
+
+def weighted_average(pixel):
+    return 0.299*pixel[0] + 0.587*pixel[1] + 0.114*pixel[2]
 
 
 def average_dithering(image, k):
@@ -30,18 +36,6 @@ def average_dithering(image, k):
             if pixel_value >= m[k-2]:
                 image[row_index][col_index] = k-1
     return image
-
-
-def weighted_average(pixel):
-    return 0.299*pixel[0] + 0.587*pixel[1] + 0.114*pixel[2]
-
-
-def my_grayscale(image):
-    grey = np.zeros((image.shape[0], image.shape[1]), dtype=np.uint8)
-    for row_index in range(len(image)):
-        for col_index in range(len(image[row_index])):
-            grey[row_index][col_index] = weighted_average(image[row_index][col_index]) // 3
-    return grey
 
 
 def dither(n):
@@ -84,18 +78,6 @@ def ordered_dithering(image, k, n):
             if pixel_value >= m[k-2]:
                 image[row_index][col_index] = k-1
     return image
-
-
-def show_images(img1, img2, height, width, cmap):
-    dpi = 80
-    figsize = width / float(dpi), height / float(dpi)
-    fig = plt.figure(figsize=figsize)
-    ax = fig.add_axes([0, 0, 1, 1])
-    ax.imshow(img1, cmap=cmap)
-    fig = plt.figure(figsize=figsize)
-    ax = fig.add_axes([0, 0, 1, 1])
-    ax.imshow(img2, cmap=cmap)
-    plt.show()
 
 
 def handle_channel(ch, k, row, col):
@@ -210,37 +192,6 @@ def handle_channels_by_pallete(ch, m, k, row, col):
     pixel_value = ch[row][col]
     for i in range(k - 1):
         if pixel_value < m[i]:
-            if i == 0:
-                ch[row][col] = 0
-            else:
-                ch[row][col] = m[i-1]
-            break
-    if pixel_value >= m[k - 1]:
-        ch[row][col] = m[k - 1]
-
-
-if __name__ == "__main__":
-    file = 'gandalf.jpg'
-    raw = Image.open(file)
-    # colors = get_colors(raw)
-    img = np.asarray(raw)
-
-    # color image
-    height, width, depth = img.shape
-    img.setflags(write=True)
-    img1 = img
-    img2 = median_cut_quantization(img1, 128)
-    show_images(img1, img2, height, width, None)
-    # img1 = img
-    # img2 = uniform_quantization(img, 16, 16, 16)
-    # show_images(img1, img2, height, width, None)
-
-    # grey image
-    # img1 = my_grayscale(img)
-    # height, width = img1.shape
-    # show_images(img1, img1, height, width, 'gray')
-    # img2 = average_dithering(img1, 16)
-    # img2 = ordered_dithering(img1, 16, 6)
-    # show_images(img1, img2)
-    # display_image_in_actual_size(img1)
-    # display_image_in_actual_size(img2)
+            ch[row][col] = m[i]
+            return
+    ch[row][col] = m[k - 1]
