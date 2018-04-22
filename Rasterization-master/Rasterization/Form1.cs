@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -91,111 +91,39 @@ namespace Rasterization
 
                 y += m;
             }
-            /*
-            if (Math.Abs(y1 - y2) < Math.Abs(x1 - x2))
-            {
-                float y = y1;
-                float m = Math.Abs((float)(y2 - y1) / (float)(x2 - x1));
-                for (int x = x1; x <= x2; ++x)
-                {
-                    double c1Fraction = Math.Abs(y - Math.Floor(y));
-                    double c2Fraction = 1.0 - c1Fraction;
-                    int c1 = (int)(255 - 255 * c1Fraction);
-                    int c2 = (int)(255 - 255 * c2Fraction);
-
-                    if (y1 < y2)
-                    {
-                        bmp.SetPixel(x, (int)Math.Floor(y), Color.FromArgb(255, c1, c1, c1));
-                        bmp.SetPixel(x, (int)Math.Ceiling(y), Color.FromArgb(255, c2, c2, c2));
-                    }
-                    if (y1 > y2)
-                    {
-                        bmp.SetPixel(x, y1 - ((int)Math.Floor(y) - y1), Color.FromArgb(255, c1, c1, c1));
-                        bmp.SetPixel(x, y1 - ((int)Math.Ceiling(y) - y1), Color.FromArgb(255, c2, c2, c2));
-                    }
-
-                    y += m;
-                }
-            }
-            else
-            {
-                float x = x1;
-                float m = Math.Abs((float)(x2 - x1) / (float)(y2 - y1));
-                for (int y = y1; y <= y2; ++y)
-                {
-                    double c1Fraction = Math.Abs(x - Math.Floor(x));
-                    double c2Fraction = 1.0 - c1Fraction;
-                    int c1 = (int)(255 - 255 * c1Fraction);
-                    int c2 = (int)(255 - 255 * c2Fraction);
-                    if (y1 < y2)
-                    {
-                        bmp.SetPixel((int)Math.Floor(x), y, Color.FromArgb(255, c1, c1, c1));
-                        bmp.SetPixel((int)Math.Ceiling(x), y, Color.FromArgb(255, c2, c2, c2));
-                    }
-                    if (y1 > y2)
-                    {
-                        bmp.SetPixel(x1 - ((int)Math.Floor(x) - x2), y, Color.FromArgb(255, c1, c1, c1));
-                        bmp.SetPixel(x1 - ((int)Math.Ceiling(x) - x2), y, Color.FromArgb(255, c2, c2, c2));
-                    }
-
-                    x += m;
-                }
-            }
-            */
         }
 
         private void DrawAntiAliasedCircle()
         {
             int R = (int)Math.Sqrt((p1.X - p2.X) * (p1.X - p2.X) + (p1.Y - p2.Y) * (p1.Y - p2.Y));
-
-            int lineColor = 0;
-            int bgColor = 255;
-
             int x = R;
             int y = 0;
-
-            try { bmp.SetPixel(p1.X + R, p1.Y, Color.Black); } catch { }
-            try { bmp.SetPixel(p1.X - R, p1.Y, Color.Black); } catch { }
-            try { bmp.SetPixel(p1.X, p1.Y + R, Color.Black); } catch { }
-            try { bmp.SetPixel(p1.X, p1.Y - R, Color.Black); } catch { }
-
             while ( x > y)
             {
+                x = (int)Math.Ceiling(Math.Sqrt(R * R - y * y));
+                double c1Fraction = Math.Ceiling(Math.Sqrt(R * R - y * y)) - Math.Sqrt(R * R - y * y);
+                double c2Fraction = 1.0 - c1Fraction;
+                int c1Value = (int)(255 * c1Fraction);
+                int c2Value = (int)(255 * c2Fraction);
+                Color c1 = Color.FromArgb(c1Value, c1Value, c1Value);
+                Color c2 = Color.FromArgb(c2Value, c2Value, c2Value);
+                bmp.SetPixel(x + (int)p1.X, y + (int)p1.Y, c1);
+                bmp.SetPixel((x - 1) + (int)p1.X, y + (int)p1.Y, c2);
+                bmp.SetPixel(-x + (int)p1.X, y + (int)p1.Y, c1);
+                bmp.SetPixel(-(x - 1) + (int)p1.X, y + (int)p1.Y, c2);
+                bmp.SetPixel(x + (int)p1.X, -y + (int)p1.Y, c1);
+                bmp.SetPixel((x - 1) + (int)p1.X, -y + (int)p1.Y, c2);
+                bmp.SetPixel(-x + (int)p1.X, -y + (int)p1.Y, c1);
+                bmp.SetPixel(-(x - 1) + (int)p1.X, -y + (int)p1.Y, c2);
+                bmp.SetPixel(y + (int)p1.X, x + (int)p1.Y, c1);
+                bmp.SetPixel(y + (int)p1.X, (x - 1) + (int)p1.Y, c2);
+                bmp.SetPixel(-y + (int)p1.X, x + (int)p1.Y, c1);
+                bmp.SetPixel(-y + (int)p1.X, (x - 1) + (int)p1.Y, c2);
+                bmp.SetPixel(y + (int)p1.X, -x + (int)p1.Y, c1);
+                bmp.SetPixel(y + (int)p1.X, -(x - 1) + (int)p1.Y, c2);
+                bmp.SetPixel(-y + (int)p1.X, -x + (int)p1.Y, c1);
+                bmp.SetPixel(-y + (int)p1.X, -(x - 1) + (int)p1.Y, c2);
                 ++y;
-                double x_real = Math.Sqrt(R * R - y * y);
-                x = (int)Math.Ceiling(x_real);
-                double error = x - x_real;
-
-                int color_r = (int)(lineColor * (1 - error) + bgColor * error);
-                int color_l = (int)(lineColor * error + bgColor * (1 - error));
-
-                var colorR = Color.FromArgb(255, color_r, color_r, color_r);
-                var colorL = Color.FromArgb(255, color_l, color_l, color_l);
-
-                try { bmp.SetPixel(p1.X + x, p1.Y + y, colorR); } catch { }
-                try { bmp.SetPixel(p1.X + x - 1, p1.Y + y, colorL); } catch { }
-
-                try { bmp.SetPixel(p1.X + x, p1.Y - y, colorR); } catch { }
-                try { bmp.SetPixel(p1.X + x - 1, p1.Y - y, colorL); } catch { }
-
-                try { bmp.SetPixel(p1.X - x, p1.Y + y, colorL); } catch { }
-                try { bmp.SetPixel(p1.X - x - 1, p1.Y + y, colorR); } catch { }
-
-                try { bmp.SetPixel(p1.X - x, p1.Y - y, colorL); } catch { }
-                try { bmp.SetPixel(p1.X - x - 1, p1.Y - y, colorR); } catch { }
-
-                try { bmp.SetPixel(p1.X + y, p1.Y + x, colorR); } catch { }
-                try { bmp.SetPixel(p1.X + y - 1, p1.Y + x, colorL); } catch { }
-
-                try { bmp.SetPixel(p1.X - y, p1.Y + x, colorL); } catch { }
-                try { bmp.SetPixel(p1.X - y - 1, p1.Y + x, colorR); } catch { }
-
-                try { bmp.SetPixel(p1.X + y, p1.Y - x, colorR); } catch { }
-                try { bmp.SetPixel(p1.X + y - 1, p1.Y - x, colorL); } catch { }
-
-                try { bmp.SetPixel(p1.X - y, p1.Y - x, colorL); } catch { }
-                try { bmp.SetPixel(p1.X - y - 1, p1.Y - x, colorR); } catch { }
-                
             }
         }
         
