@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.panel1 = new System.Windows.Forms.Panel();
+            this.radioButton1 = new System.Windows.Forms.RadioButton();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.clearButton = new System.Windows.Forms.Button();
             this.applyButton = new System.Windows.Forms.Button();
@@ -39,7 +40,7 @@
             this.label1 = new System.Windows.Forms.Label();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
-            this.radioButton1 = new System.Windows.Forms.RadioButton();
+            this.comboBox1 = new System.Windows.Forms.ComboBox();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.tableLayoutPanel1.SuspendLayout();
@@ -48,6 +49,7 @@
             // panel1
             // 
             this.panel1.BackColor = System.Drawing.SystemColors.Control;
+            this.panel1.Controls.Add(this.comboBox1);
             this.panel1.Controls.Add(this.radioButton1);
             this.panel1.Controls.Add(this.checkBox1);
             this.panel1.Controls.Add(this.clearButton);
@@ -63,10 +65,22 @@
             this.panel1.Size = new System.Drawing.Size(146, 536);
             this.panel1.TabIndex = 0;
             // 
+            // radioButton1
+            // 
+            this.radioButton1.AutoSize = true;
+            this.radioButton1.Location = new System.Drawing.Point(10, 94);
+            this.radioButton1.Margin = new System.Windows.Forms.Padding(3, 20, 3, 3);
+            this.radioButton1.Name = "radioButton1";
+            this.radioButton1.Size = new System.Drawing.Size(107, 17);
+            this.radioButton1.TabIndex = 16;
+            this.radioButton1.TabStop = true;
+            this.radioButton1.Text = "Drawing with pen";
+            this.radioButton1.UseVisualStyleBackColor = true;
+            // 
             // checkBox1
             // 
             this.checkBox1.AutoSize = true;
-            this.checkBox1.Location = new System.Drawing.Point(21, 126);
+            this.checkBox1.Location = new System.Drawing.Point(29, 144);
             this.checkBox1.Name = "checkBox1";
             this.checkBox1.Size = new System.Drawing.Size(83, 17);
             this.checkBox1.TabIndex = 15;
@@ -120,7 +134,7 @@
             // CircleButton
             // 
             this.CircleButton.AutoSize = true;
-            this.CircleButton.Location = new System.Drawing.Point(21, 63);
+            this.CircleButton.Location = new System.Drawing.Point(10, 69);
             this.CircleButton.Margin = new System.Windows.Forms.Padding(3, 20, 3, 3);
             this.CircleButton.Name = "CircleButton";
             this.CircleButton.Size = new System.Drawing.Size(91, 17);
@@ -132,7 +146,7 @@
             // LineButton
             // 
             this.LineButton.AutoSize = true;
-            this.LineButton.Location = new System.Drawing.Point(21, 46);
+            this.LineButton.Location = new System.Drawing.Point(10, 46);
             this.LineButton.Margin = new System.Windows.Forms.Padding(3, 20, 3, 3);
             this.LineButton.Name = "LineButton";
             this.LineButton.Size = new System.Drawing.Size(85, 17);
@@ -178,17 +192,19 @@
             this.tableLayoutPanel1.Size = new System.Drawing.Size(962, 540);
             this.tableLayoutPanel1.TabIndex = 0;
             // 
-            // radioButton1
+            // comboBox1
             // 
-            this.radioButton1.AutoSize = true;
-            this.radioButton1.Location = new System.Drawing.Point(21, 86);
-            this.radioButton1.Margin = new System.Windows.Forms.Padding(3, 20, 3, 3);
-            this.radioButton1.Name = "radioButton1";
-            this.radioButton1.Size = new System.Drawing.Size(107, 17);
-            this.radioButton1.TabIndex = 16;
-            this.radioButton1.TabStop = true;
-            this.radioButton1.Text = "Drawing with pen";
-            this.radioButton1.UseVisualStyleBackColor = true;
+            this.comboBox1.FormattingEnabled = true;
+            this.comboBox1.Items.AddRange(new object[] {
+            "1",
+            "3",
+            "5",
+            "7"});
+            this.comboBox1.Location = new System.Drawing.Point(10, 117);
+            this.comboBox1.Name = "comboBox1";
+            this.comboBox1.Size = new System.Drawing.Size(121, 21);
+            this.comboBox1.TabIndex = 17;
+            this.comboBox1.Text = "1";
             // 
             // Form1
             // 
@@ -224,6 +240,7 @@
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
         private System.Windows.Forms.CheckBox checkBox1;
         private System.Windows.Forms.RadioButton radioButton1;
+        private System.Windows.Forms.ComboBox comboBox1;
     }
 }
 

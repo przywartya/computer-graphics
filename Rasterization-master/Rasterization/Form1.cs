@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -44,6 +44,19 @@ namespace Rasterization
                 y1 = p2.Y;
                 y2 = p1.Y;
             }
+            float dy = y2 - y1;
+            float dx = x2 - x1;
+            float m = dy / dx;
+            float y = y1;
+            for (int x = x1; x <= x2; ++x)
+            {
+                bmp.SetPixel(x, (int)Math.Round(y), Color.Black);
+                y += m;
+            }
+        }
+
+        private void lineFrom(int x1, int x2, int y1, int y2)
+        {
             float dy = y2 - y1;
             float dx = x2 - x1;
             float m = dy / dx;
@@ -132,10 +145,11 @@ namespace Rasterization
             return y - Math.Truncate(y);
         }
 
-        private void drawCircle()
+        private void drawCircle(int R = 0)
         {
-            int R = (int)Math.Sqrt((p1.X - p2.X) * (p1.X - p2.X) + (p1.Y - p2.Y) * (p1.Y - p2.Y));
-
+            if (R == 0)
+                R = (int)Math.Sqrt((p1.X - p2.X) * (p1.X - p2.X) + (p1.Y - p2.Y) * (p1.Y - p2.Y));
+            
             int dE = 3;
             int dSE = 5 - 2 * R;
             int d = 1 - R;
@@ -167,10 +181,10 @@ namespace Rasterization
                 ++x;
 
                 try { bmp.SetPixel(p1.X + x, p1.Y + y, Color.Black); } catch { }
+                try { bmp.SetPixel(p1.X - x, p1.Y - y, Color.Black); } catch { }
                 try { bmp.SetPixel(p1.X + y, p1.Y + x, Color.Black); } catch { }
                 try { bmp.SetPixel(p1.X + y, p1.Y - x, Color.Black); } catch { }
                 try { bmp.SetPixel(p1.X + x, p1.Y - y, Color.Black); } catch { }
-                try { bmp.SetPixel(p1.X - x, p1.Y - y, Color.Black); } catch { }
                 try { bmp.SetPixel(p1.X - y, p1.Y - x, Color.Black); } catch { }
                 try { bmp.SetPixel(p1.X - y, p1.Y + x, Color.Black); } catch { }
                 try { bmp.SetPixel(p1.X - x, p1.Y + y, Color.Black); } catch { }
@@ -277,24 +291,24 @@ namespace Rasterization
         {
             if (Control.MouseButtons == MouseButtons.Left && radioButton1.Checked)
             {
-                var oldPoint = penPoint;
+                // var oldPoint = penPoint;
                 penPoint = new Point(e.X, e.Y);
 
-                p1 = oldPoint;
-                p2 = penPoint;
+                //p1 = oldPoint;
+                //p2 = penPoint;
 
-                if (checkBox1.Checked)
+                int R = int.Parse(comboBox1.SelectedItem.ToString());
+
+                for (int x = -R; x < R; x++)
                 {
-                    drawAntiAliasedLine();
-                }
-                else
-                {
-                    drawLine();
+                    int height = (int)Math.Sqrt(R * R - x * x);
+                    for (int y = -height; y < height; y++)
+                        bmp.SetPixel(x + penPoint.X, y + penPoint.Y, Color.Black);
                 }
 
-                p1 = new Point();
-                p2 = new Point();
-                whichP = null;
+                //p1 = new Point();
+                //p2 = new Point();
+                //whichP = null;
 
                 //grp.DrawLine(Pens.Black, oldPoint, penPoint);
             } else
