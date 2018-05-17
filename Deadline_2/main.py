@@ -78,7 +78,8 @@ class WindowInter:
     def average_dithering(self):
         k = int(self.average_dithering_k.get())
         height, width = self.grey.shape
-        result = glib.average_dithering(self.grey, k)
+        # result = glib.average_dithering(self.grey, k)
+        result = glib.average_dithering_n(self.grey, k)
         show_images(self.grey, result, height, width, cmap='gray')
 
     def ordered_dithering(self):
@@ -94,6 +95,7 @@ class WindowInter:
         kb = int(self.uniform_quantization_kb.get())
         height, width, _ = self.color.shape
         result = glib.uniform_quantization(self.color, kr, kg, kb)
+        # result = glib.uniform_color_quantization(self.color, kr, kg, kb)
         show_images(self.color, result, height, width, cmap=None)
 
     def median_cut_quantization(self):
