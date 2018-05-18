@@ -12,6 +12,15 @@ canvas_height = 400
 python_green = "#476042"
 
 
+class AETPointer:
+    def __init__(self, ymax, x, m_inverse):
+        self.ymax = ymax
+        self.x = x
+        self.m_inverse = m_inverse
+
+    def __str__(self):
+        return "AET ymax: {}, x: {}, 1/m: {} ".format(self.ymax, self.x, self.m_inverse)
+
 class Board:
     def __init__(self, master, canvas):
         self.i = 0
@@ -30,19 +39,142 @@ class Board:
     def make_buttons(self):
         button = tk.Button(master, text="Rectangle", command=lambda: self.set_mode(self.Rectangle))
         button.pack(side=tk.BOTTOM)
-        button = tk.Button(master, text="DDA", command=lambda: self.set_mode(self.DDA))
+        button = tk.Button(master, text="End polygon", command=self.end_polygon)
+        button.pack(side=tk.BOTTOM)
+        button = tk.Button(master, text="Start polygon", command=lambda: self.set_mode(self.start_polygon))
         button.pack(side=tk.BOTTOM)
         button = tk.Button(master, text="Liang Barsky", command=lambda: self.set_mode(self.LB))
         button.pack(side=tk.BOTTOM)
         button = tk.Button(master, text="Redraw", command=self.redraw)
         button.pack(side=tk.BOTTOM)
-        self.create_input("thickness")
-        self.thickness = tk.Entry(self.master, width=5)
-        self.thickness.pack()
 
     def set_mode(self, mode):
         self.mode = mode
         self.points = []
+    
+    def start_polygon(self):
+        pass
+
+    def end_polygon(self):
+        for idx, point in enumerate(self.points):
+            point.idx = idx
+
+        idx = 0
+        while True:
+            current = self.points[idx]
+            idx = (idx + 1) % len(self.points)
+            next_point = self.points[idx]
+            self.my_dda(
+                Point(int(current.x), int(current.y)), 
+                Point(int(next_point.x), int(next_point.y)),
+                color="#000000"
+            )
+            if idx == 0:
+                break
+        sorted_points = arrange_rectangle_points(self.points)
+        print("Sorted points")
+        for i in sorted_points:
+            print(i.idx, i)
+
+        print("NOT sorted")
+        for idx, point in enumerate(self.points):
+            print(idx, point)
+            point.idx = idx
+        AET = []
+        indices = [point.idx for point in sorted_points]
+        k = 0
+        i = indices[k]
+        ymin = self.points[indices[0]].y
+        ymax = self.points[indices[-1]].y
+        y = ymin
+        print(indices)
+        print(ymin, ymax)
+        while y <= ymax:
+            while self.points[i].y == y:
+                if self.points[i-1].y > self.points[i].y:
+                    p1 = self.points[i-1]
+                    p2 = self.points[i]
+                    dy = p1.y - p2.y
+                    if p1.x > p2.x:
+                        dx = p1.x - p2.x
+                        x_min = p2.x
+                    else:
+                        dx = p2.x - p1.x
+                        x_min = p1.x
+                    if dx > dy:
+                        m_inverse = dy/dx
+                    else:
+                        m_inverse = dx/dy
+                    active_edge = AETPointer(
+                        ymax=p1.y,
+                        x=x_min,
+                        m_inverse=m_inverse
+                    )
+                    AET.append(active_edge)
+                if self.points[(i+1)%len(self.points)].y > self.points[i].y:
+                    p1 = self.points[(i+1)%len(self.points)]
+                    p2 = self.points[i]
+                    dy = p1.y - p2.y
+                    if p1.x > p2.x:
+                        dx = p1.x - p2.x
+                        x_min = p2.x
+                    else:
+                        dx = p2.x - p1.x
+                        x_min = p1.x
+                    if dx > dy:
+                        m_inverse = dy/dx
+                    else:
+                        m_inverse = dx/dy
+                    active_edge = AETPointer(
+                        ymax=p1.y,
+                        x=x_min,
+                        m_inverse=m_inverse
+                    )
+                    AET.append(active_edge)
+                k += 1
+                i = indices[k%len(indices)]
+            
+            # print("AET pre sorted")
+            # for xd in AET:
+            #     print(xd)
+            AET = sorted(AET, key=lambda e: e.x)
+            # AET.reverse()
+            print("Current Y {}".format(y))
+            print("AET post sorted")
+            for xd in AET:
+                print(xd)
+            for idx, edge in enumerate(AET):
+                if (idx + 1) == len(AET):
+                    break
+                next_edge = AET[idx + 1]
+                print("Printing Y: {} line between {} and {}".format(y, int(edge.x), int(next_edge.x)))
+                for x_iter in range(math.ceil(edge.x), math.ceil(next_edge.x)):
+                    self.img.put("#00ff00", (int(x_iter), int(y)))     
+                # print("Curr {} Next {}".format(edge, next_edge))
+            y += 1
+            AET = [edge for edge in AET if edge.ymax != y]
+            for edge in AET:
+                # edge.x += math.ceil(edge.m_inverse)
+                edge.x += edge.m_inverse
+
+
+    def get_pixels_between_two_points(self, p1, p2):
+        print("Pixels from {} to {}".format(p1, p2))
+        p1, p2 = arrange_points([p1, p2])
+        p1, p2 = Point(int(p1.x), int(p1.y)), Point(int(p2.x), int(p2.y))
+        dy = p2.y - p1.y
+        dx = p2.x - p1.x
+        step = abs(dx if dx >= abs(dy) else dy)
+        dx, dy = dx / step, dy / step
+        points = {}
+        while step > 0:
+            points[int(p1.y)] = int(p1.x)
+            p1.y += dy
+            p1.x += dx
+            step -= 1
+        return points
+        #     print(p1.x, p1.y)
+
 
     def create_input(self, name):
         label = tk.IntVar()
@@ -55,6 +187,10 @@ class Board:
         print(p1)
         self.i += 1
         self.try_create_pixel(p1)
+
+        if self.mode == self.start_polygon:
+            print("Polygon mode")
+            return
 
         if self.mode in [self.DDA, self.Rectangle, self.LB]:
             if not len(self.points) % 2:
@@ -165,13 +301,13 @@ class Board:
     def my_dda(self, p1, p2, color='#ff0000'):
         p1, p2 = arrange_points([p1, p2])
         p1, p2 = Point(int(p1.x), int(p1.y)), Point(int(p2.x), int(p2.y))
-        print("Drawing from {} to {}".format(p1, p2))
+        # print("Drawing from {} to {}".format(p1, p2))
         dy = p2.y - p1.y
         dx = p2.x - p1.x
         step = abs(dx if dx >= abs(dy) else dy)
         dx, dy = dx / step, dy / step
         while step > 0:
-            self.try_create_pixel(Point(int(p1.x), int(p1.y)), color)
+            self.img.put(color, (int(p1.x), int(p1.y)))    
             p1.y += dy
             p1.x += dx
             step -= 1
