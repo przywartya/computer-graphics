@@ -55,10 +55,12 @@ class Board:
     def start_polygon(self):
         pass
 
+    def mod(self, x, m):
+        return (x % ( m + m )) % m
+        
     def end_polygon(self):
         for idx, point in enumerate(self.points):
             point.idx = idx
-
         idx = 0
         while True:
             current = self.points[idx]
@@ -75,7 +77,6 @@ class Board:
         print("Sorted points")
         for i in sorted_points:
             print(i.idx, i)
-
         print("NOT sorted")
         for idx, point in enumerate(self.points):
             print(idx, point)
@@ -90,41 +91,48 @@ class Board:
         print(indices)
         print(ymin, ymax)
         while y <= ymax:
-            while self.points[i].y == y:
-                if self.points[i-1].y > self.points[i].y:
-                    p1 = self.points[i-1]
+            while int(self.points[i].y) == y:
+                if self.points[self.mod(i-1, len(self.points))].y > self.points[i].y:
+                    p1 = self.points[self.mod(i-1, len(self.points))]
                     p2 = self.points[i]
+                    dx = p1.x - p2.x
                     dy = p1.y - p2.y
+                    m_inverse = dx/dy
+
                     if p1.x > p2.x:
-                        dx = p1.x - p2.x
-                        x_min = p2.x
+                        if m_inverse < 0:
+                            x_min = p1.x
+                        else:
+                            x_min = p2.x    
                     else:
-                        dx = p2.x - p1.x
-                        x_min = p1.x
-                    if dx > dy:
-                        m_inverse = dy/dx
-                    else:
-                        m_inverse = dx/dy
+                        if m_inverse < 0:
+                            x_min = p2.x
+                        else:
+                            x_min = p1.x    
                     active_edge = AETPointer(
                         ymax=p1.y,
                         x=x_min,
                         m_inverse=m_inverse
                     )
+                    
                     AET.append(active_edge)
-                if self.points[(i+1)%len(self.points)].y > self.points[i].y:
-                    p1 = self.points[(i+1)%len(self.points)]
+                if self.points[self.mod(i + 1, len(self.points))].y > self.points[i].y:
+                    p1 = self.points[self.mod(i + 1, len(self.points))]
                     p2 = self.points[i]
+                    dx = p1.x - p2.x
                     dy = p1.y - p2.y
+                    m_inverse = dx/dy
+
                     if p1.x > p2.x:
-                        dx = p1.x - p2.x
-                        x_min = p2.x
+                        if m_inverse < 0:
+                            x_min = p1.x
+                        else:
+                            x_min = p2.x    
                     else:
-                        dx = p2.x - p1.x
-                        x_min = p1.x
-                    if dx > dy:
-                        m_inverse = dy/dx
-                    else:
-                        m_inverse = dx/dy
+                        if m_inverse < 0:
+                            x_min = p2.x
+                        else:
+                            x_min = p1.x    
                     active_edge = AETPointer(
                         ymax=p1.y,
                         x=x_min,
@@ -132,13 +140,10 @@ class Board:
                     )
                     AET.append(active_edge)
                 k += 1
-                i = indices[k%len(indices)]
-            
-            # print("AET pre sorted")
-            # for xd in AET:
-            #     print(xd)
+                if k >= len(indices):
+                    break
+                i = indices[k]
             AET = sorted(AET, key=lambda e: e.x)
-            # AET.reverse()
             print("Current Y {}".format(y))
             print("AET post sorted")
             for xd in AET:
@@ -148,15 +153,15 @@ class Board:
                     break
                 next_edge = AET[idx + 1]
                 print("Printing Y: {} line between {} and {}".format(y, int(edge.x), int(next_edge.x)))
-                for x_iter in range(math.ceil(edge.x), math.ceil(next_edge.x)):
-                    self.img.put("#00ff00", (int(x_iter), int(y)))     
-                # print("Curr {} Next {}".format(edge, next_edge))
+
+                put_y = self.canvas.winfo_reqheight() - int(y)
+                # self.canvas.create_line(int(edge.x), put_y, int(next_edge.x), put_y)
+                for x_iter in range(math.ceil(edge.x), math.floor(next_edge.x)-1):
+                    self.img.put("#00ff00", (x_iter, put_y))
             y += 1
             AET = [edge for edge in AET if edge.ymax != y]
             for edge in AET:
-                # edge.x += math.ceil(edge.m_inverse)
                 edge.x += edge.m_inverse
-
 
     def get_pixels_between_two_points(self, p1, p2):
         print("Pixels from {} to {}".format(p1, p2))
@@ -183,7 +188,8 @@ class Board:
         label_dir.pack()
 
     def paint(self, event):
-        p1 = Point(event.x, event.y)
+        y = self.canvas.winfo_reqheight() - event.y
+        p1 = Point(event.x, y)
         print(p1)
         self.i += 1
         self.try_create_pixel(p1)
@@ -200,7 +206,8 @@ class Board:
 
     def try_create_pixel(self, p, color='#ff0000'):
         if 0 < p.x < canvas_width and 0 < p.y < canvas_height:
-            self.img.put(color, (p.x, p.y))
+            y = self.canvas.winfo_reqheight() - p.y
+            self.img.put(color, (p.x, y))
             self.points.append(p)
 
     def redraw(self, mode=None):
@@ -307,7 +314,9 @@ class Board:
         step = abs(dx if dx >= abs(dy) else dy)
         dx, dy = dx / step, dy / step
         while step > 0:
-            self.img.put(color, (int(p1.x), int(p1.y)))    
+            y = self.canvas.winfo_reqheight() - int(p1.y)
+            self.img.put(color, (int(p1.x), int(y)))
+            # self.img.put(color, (int(p1.x), int(p1.y)))    
             p1.y += dy
             p1.x += dx
             step -= 1
