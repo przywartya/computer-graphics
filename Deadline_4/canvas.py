@@ -13,13 +13,37 @@ python_green = "#476042"
 
 
 class AETPointer:
-    def __init__(self, ymax, x, m_inverse):
-        self.ymax = ymax
-        self.x = x
-        self.m_inverse = m_inverse
+    def __init__(self, p1, p2, next_edge):
+        self.next_edge = next_edge
+        dx = p1.x - p2.x
+        dy = p1.y - p2.y
+        self.m_inverse = dx/dy
+        if p1.x > p2.x:
+            if self.m_inverse < 0:
+                self.x = p1.x
+            else:
+                self.x = p2.x    
+        else:
+            if self.m_inverse < 0:
+                self.x = p2.x
+            else:
+                self.x = p1.x
+        if p1.y > p2.y:
+            self.ymax = p1.y
+        else:
+            self.ymax = p2.y
 
     def __str__(self):
         return "AET ymax: {}, x: {}, 1/m: {} ".format(self.ymax, self.x, self.m_inverse)
+
+
+class ActiveEdgeTable:
+    def __init__(self):
+        self.current = None
+    
+    def insert(self, p1, p2):
+        new_edge = AETPointer(p1, p2, self.current)
+        self.current = new_edge
 
 class Board:
     def __init__(self, master, canvas):
@@ -28,11 +52,9 @@ class Board:
         self.canvas = canvas
         self.img = tk.PhotoImage(width=canvas_width, height=canvas_height)
         self.canvas.create_image((canvas_width // 2, canvas_height // 2), image=self.img, state="normal")
-
         self.master = master
         self.mode = self.Rectangle
         self.last_rectangle = None
-
         canvas.bind("<Button-1>", self.paint)
         self.make_buttons()
 
@@ -48,6 +70,12 @@ class Board:
         button = tk.Button(master, text="Redraw", command=self.redraw)
         button.pack(side=tk.BOTTOM)
 
+    def create_input(self, name):
+        label = tk.IntVar()
+        label.set(name)
+        label_dir = tk.Label(self.master, textvariable=label, width=10)
+        label_dir.pack()
+
     def set_mode(self, mode):
         self.mode = mode
         self.points = []
@@ -55,32 +83,11 @@ class Board:
     def start_polygon(self):
         pass
 
-    def mod(self, x, m):
-        return (x % ( m + m )) % m
-        
     def end_polygon(self):
         for idx, point in enumerate(self.points):
             point.idx = idx
-        idx = 0
-        while True:
-            current = self.points[idx]
-            idx = (idx + 1) % len(self.points)
-            next_point = self.points[idx]
-            self.my_dda(
-                Point(int(current.x), int(current.y)), 
-                Point(int(next_point.x), int(next_point.y)),
-                color="#000000"
-            )
-            if idx == 0:
-                break
+            self.my_dda(self.points[idx], self.points[(idx+1)%len(self.points)], color="#000000")
         sorted_points = arrange_rectangle_points(self.points)
-        print("Sorted points")
-        for i in sorted_points:
-            print(i.idx, i)
-        print("NOT sorted")
-        for idx, point in enumerate(self.points):
-            print(idx, point)
-            point.idx = idx
         AET = []
         indices = [point.idx for point in sorted_points]
         k = 0
@@ -90,55 +97,12 @@ class Board:
         y = ymin
         print(indices)
         print(ymin, ymax)
-        while y <= ymax:
-            while int(self.points[i].y) == y:
-                if self.points[self.mod(i-1, len(self.points))].y > self.points[i].y:
-                    p1 = self.points[self.mod(i-1, len(self.points))]
-                    p2 = self.points[i]
-                    dx = p1.x - p2.x
-                    dy = p1.y - p2.y
-                    m_inverse = dx/dy
-
-                    if p1.x > p2.x:
-                        if m_inverse < 0:
-                            x_min = p1.x
-                        else:
-                            x_min = p2.x    
-                    else:
-                        if m_inverse < 0:
-                            x_min = p2.x
-                        else:
-                            x_min = p1.x    
-                    active_edge = AETPointer(
-                        ymax=p1.y,
-                        x=x_min,
-                        m_inverse=m_inverse
-                    )
-                    
-                    AET.append(active_edge)
-                if self.points[self.mod(i + 1, len(self.points))].y > self.points[i].y:
-                    p1 = self.points[self.mod(i + 1, len(self.points))]
-                    p2 = self.points[i]
-                    dx = p1.x - p2.x
-                    dy = p1.y - p2.y
-                    m_inverse = dx/dy
-
-                    if p1.x > p2.x:
-                        if m_inverse < 0:
-                            x_min = p1.x
-                        else:
-                            x_min = p2.x    
-                    else:
-                        if m_inverse < 0:
-                            x_min = p2.x
-                        else:
-                            x_min = p1.x    
-                    active_edge = AETPointer(
-                        ymax=p1.y,
-                        x=x_min,
-                        m_inverse=m_inverse
-                    )
-                    AET.append(active_edge)
+        while y < ymax:
+            while self.points[i].y == y:
+                if self.points[i-1].y > self.points[i].y:
+                    AET.append(AETPointer(self.points[i-1], self.points[i]))
+                if self.points[(i + 1) % len(self.points)].y > self.points[i].y:
+                    AET.append(AETPointer(self.points[(i + 1) % len(self.points)], self.points[i]))
                 k += 1
                 if k >= len(indices):
                     break
@@ -151,41 +115,17 @@ class Board:
             for idx, edge in enumerate(AET):
                 if (idx + 1) == len(AET):
                     break
+                if idx % 2 != 0:
+                    continue
                 next_edge = AET[idx + 1]
                 print("Printing Y: {} line between {} and {}".format(y, int(edge.x), int(next_edge.x)))
-
                 put_y = self.canvas.winfo_reqheight() - int(y)
-                # self.canvas.create_line(int(edge.x), put_y, int(next_edge.x), put_y)
                 for x_iter in range(math.ceil(edge.x), math.floor(next_edge.x)-1):
                     self.img.put("#00ff00", (x_iter, put_y))
             y += 1
             AET = [edge for edge in AET if edge.ymax != y]
             for edge in AET:
                 edge.x += edge.m_inverse
-
-    def get_pixels_between_two_points(self, p1, p2):
-        print("Pixels from {} to {}".format(p1, p2))
-        p1, p2 = arrange_points([p1, p2])
-        p1, p2 = Point(int(p1.x), int(p1.y)), Point(int(p2.x), int(p2.y))
-        dy = p2.y - p1.y
-        dx = p2.x - p1.x
-        step = abs(dx if dx >= abs(dy) else dy)
-        dx, dy = dx / step, dy / step
-        points = {}
-        while step > 0:
-            points[int(p1.y)] = int(p1.x)
-            p1.y += dy
-            p1.x += dx
-            step -= 1
-        return points
-        #     print(p1.x, p1.y)
-
-
-    def create_input(self, name):
-        label = tk.IntVar()
-        label.set(name)
-        label_dir = tk.Label(self.master, textvariable=label, width=10)
-        label_dir.pack()
 
     def paint(self, event):
         y = self.canvas.winfo_reqheight() - event.y
@@ -222,12 +162,9 @@ class Board:
         print("LB from {} to {}".format(Point1, Point2))
         x1, y1 = Point1.x, Point1.y
         x2, y2 = Point2.x, Point2.y
-        # print(x1, x2, y1, y2)
         r1, r2, r3, r4 = arrange_rectangle_points(self.last_rectangle)
-        # print(r1, r2, r3, r4)
         xmin, ymin = r1.x, r1.y
         xmax, ymax = r4.x, r4.y
-        # print(xmin, ymin, xmax, ymax)
         p1 = -(x2 - x1)
         p2 = -p1
         p3 = -(y2 - y1)
@@ -237,12 +174,6 @@ class Board:
         q3 = y1 - ymin
         q4 = ymax - y1
         posarr, negarr = [1], [0]
-        # print("Variables p")
-        # print(p1, p2, p3, p4)
-        # print("Variables q")
-        # print(q1, q2, q3, q4)
-        # print("Other")
-        # print(posarr, negarr, posind, negind)
         if (p1 == 0 and q1 < 0) or (p3 == 0 and q3 < 0):
             print("Line is parallel to clipping window!")
             return
@@ -308,15 +239,13 @@ class Board:
     def my_dda(self, p1, p2, color='#ff0000'):
         p1, p2 = arrange_points([p1, p2])
         p1, p2 = Point(int(p1.x), int(p1.y)), Point(int(p2.x), int(p2.y))
-        # print("Drawing from {} to {}".format(p1, p2))
         dy = p2.y - p1.y
         dx = p2.x - p1.x
         step = abs(dx if dx >= abs(dy) else dy)
         dx, dy = dx / step, dy / step
         while step > 0:
             y = self.canvas.winfo_reqheight() - int(p1.y)
-            self.img.put(color, (int(p1.x), int(y)))
-            # self.img.put(color, (int(p1.x), int(p1.y)))    
+            self.img.put(color, (int(p1.x), int(y)))    
             p1.y += dy
             p1.x += dx
             step -= 1
@@ -334,44 +263,10 @@ class Board:
         self.points = []
 
 
-    @staticmethod
-    def cov(d, r):
-        # Math domain errors
-        # a = math.acos(d / r)  # Math domain error 3.0
-        # b = math.sqrt(r ** 2 - d ** 2) # math domain error -2
-        return 1 / math.pi * math.acos(d / r) - d / (math.pi * r ** 2) * math.sqrt(
-            r ** 2 - d ** 2) if -1 <= d / r <= 1 and r ** 2 - d ** 2 > 0 else 0
-
-    @staticmethod
-    def rect_matrix(n):
-        """
-        N must be odd
-        """
-        upper_triangle = [(i * 2) + 1 for i in range(n // 2)]
-        counts = upper_triangle + [n] + upper_triangle[::-1]
-        matrix = np.zeros((n, n))
-
-        for i, count in zip(range(n), counts):
-            for j in range(count):
-                matrix[i][(n - count) // 2 + j] = 1
-        print(matrix)
-        return matrix
-
-    @property
-    def modes(self):
-        return {
-            "DDA": self.DDA,
-            "Rectangle": self.Rectangle,
-        }
-
-
 if __name__ == '__main__':
     master = tk.Tk()
     master.title("Canvas Drawing")
-    w = tk.Canvas(master,
-                  width=canvas_width,
-                  height=canvas_height, bd=5, highlightthickness=0, relief='ridge')
+    w = tk.Canvas(master, width=canvas_width, height=canvas_height, bd=5, highlightthickness=0, relief='ridge')
     w.pack()
     b = Board(master, w)
-
     tk.mainloop()
