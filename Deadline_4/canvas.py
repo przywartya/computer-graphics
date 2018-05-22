@@ -18,6 +18,8 @@ class AETPointer:
         dy = p1.y - p2.y
         self.m_inverse = dx/dy
         if p1.x > p2.x:
+            # sign of m_inverse depends only on dx, because dy is always positive
+            # x = p2.x
             if self.m_inverse < 0:
                 self.x = p1.x
             else:
@@ -66,6 +68,7 @@ class Board:
         for idx, point in enumerate(self.points):
             point.idx = idx
             self.drawing_with_pen(self.points[idx], self.points[(idx+1)%len(self.points)], color="#000000")
+        # First create indices list and then sort this list according to y's
         sorted_points = arrange_rectangle_points(self.points)
         AET = []
         indices = [point.idx for point in sorted_points]
@@ -120,6 +123,7 @@ class Board:
         q2 = xmax - x1
         q3 = y1 - ymin
         q4 = ymax - y1
+        # DONT  USE LIST
         posarr, negarr = [1], [0]
         if (p1 == 0 and q1 < 0) or (p3 == 0 and q3 < 0):
             print("Line is parallel to clipping window!")
