@@ -3,14 +3,18 @@ import math
 
 import tkinter as tk
 import numpy as np
+from PIL import Image
 
 from utils.dataclasses import Point
 from utils.list_utils import arrange_points, arrange_rectangle_points
 
-canvas_width = 400
-canvas_height = 400
+canvas_width = 600
+canvas_height = 426
 python_green = "#476042"
-
+fb_image = Image.open('colour_wheel.png')
+fb_image.load()
+fb_image = np.asarray( fb_image, dtype="int32" )
+img_width, img_height, _ = fb_image.shape
 
 class AETPointer:
     def __init__(self, p1, p2):
@@ -44,13 +48,23 @@ class Board:
         self.points = []
         self.canvas = canvas
         self.img = tk.PhotoImage(width=canvas_width, height=canvas_height)
+        self.img = tk.PhotoImage(file='colour_wheel.png', width=canvas_width, height=canvas_height)
         self.canvas.create_image((canvas_width // 2, canvas_height // 2), image=self.img, state="normal")
-        self.canvas.configure(background='white')
+        # self.canvas.configure(background='white')
         self.master = master
-        self.mode = self.Rectangle
+        self.mode = self.flood
         self.last_rectangle = None
         canvas.bind("<Button-1>", self.paint)
         self.make_buttons()
+        # self.paint_image_to_canvas()
+    
+    # def paint_image_to_canvas(self):
+    #     for x in range(0, canvas_width):
+    #         for y in range(0, canvas_height):
+    #             r, g, b = fb_image[x, y]
+    #             hex_color = '#%02x%02x%02x' % (r, g, b)
+    #             self.img.put(hex_color, (x, y))
+
     
     def start_polygon(self):
         pass
@@ -62,7 +76,12 @@ class Board:
         print("Printing scanline on: {} line between {} and {}".format(y, int(this_edge.x), int(next_edge.x)))
         put_y = self.canvas.winfo_reqheight() - int(y)
         for x_iter in range(math.ceil(this_edge.x), math.floor(next_edge.x)):
-            self.img.put("#ff00ff", (x_iter, put_y))
+            img_y = put_y % img_width
+            img_x = x_iter % img_height
+            r, g, b = fb_image[img_y, img_x]
+            hex_color = '#%02x%02x%02x' % (r, g, b)
+            print(img_x, img_y, hex_color)
+            self.img.put(hex_color, (x_iter, put_y))
 
     def end_polygon(self):
         for idx, point in enumerate(self.points):
@@ -243,6 +262,38 @@ class Board:
         self.canvas.create_image((canvas_width // 2, canvas_height // 2), image=self.img, state="normal")
         if mode:
             self.mode = mode
+    
+    def flood_fill(self, photo, coords):
+        print("Started")
+        orig_value = photo.get(coords[0], coords[1])
+        hex_color = '#%02x%02x%02x' % (0, 255, 255)
+        stack = set(((coords[0], coords[1]),))
+        while stack:
+            x, y = stack.pop()
+            current_color = photo.get(x, y)
+            c_r, c_g, c_b = current_color
+            o_r, o_g, o_b = orig_value
+            distance = math.sqrt(math.pow(c_r - o_r, 2) + math.pow(c_g - o_g, 2) + math.pow(c_b - o_b, 2))
+            if distance < 64.0:
+                photo.put(hex_color, (x, y))
+                if x > 0:
+                    stack.add((x - 1, y))
+                if x < (canvas_width - 1):
+                    stack.add((x + 1, y))
+                if y > 0:
+                    stack.add((x, y - 1))
+                if y < (canvas_height - 1):
+                    stack.add((x, y + 1))
+        print("Ended")
+
+    def flood(self):
+        print("Flood fill")
+        p = self.points[-1]
+        print(p)
+        f_x, f_y = p.x, canvas_height- p.y
+        print(self.img.get(f_x, f_y))
+        self.flood_fill(self.img, (f_x, f_y))
+        # pamietaj ze kolor na hasha
 
     def make_buttons(self):
         button = tk.Button(master, text="Redraw", command=self.redraw)
@@ -254,6 +305,8 @@ class Board:
         button = tk.Button(master, text="Liang Barsky", command=lambda: self.set_mode(self.LB))
         button.pack(side=tk.BOTTOM)
         button = tk.Button(master, text="Rectangle", command=lambda: self.set_mode(self.Rectangle))
+        button.pack(side=tk.BOTTOM)
+        button = tk.Button(master, text="Flood fill", command=lambda: self.set_mode(self.Flood))
         button.pack(side=tk.BOTTOM)
 
     def create_input(self, name):
