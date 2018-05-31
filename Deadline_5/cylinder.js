@@ -466,9 +466,10 @@ var SoftEngine;
     })();    
 
     SoftEngine.Mesh = (function () {
-        function Mesh(name, verticesCount) {
+        function Mesh(name, verticesCount, facesCount) {
             this.name = name;
             this.Vertices = new Array(verticesCount);
+            this.Faces = new Array(facesCount);
             this.Rotation = Vector3.Zero();
             this.Position = Vector3.Zero();
         }
@@ -483,6 +484,7 @@ var SoftEngine;
             this.workingWidth = canvas.width;
             this.workingHeight = canvas.height;
             this.workingContext = this.workingCanvas.getContext("2d");
+            this.depthbuffer = new Array(this.workingWidth * this.workingHeight);
         }
 
         // This function is called to clear the back buffer with a specific color
@@ -491,6 +493,11 @@ var SoftEngine;
             this.workingContext.clearRect(0, 0, this.workingWidth, this.workingHeight);
             // once cleared with black pixels, we're getting back the associated image data to clear out back buffer
             this.backbuffer = this.workingContext.getImageData(0, 0, this.workingWidth, this.workingHeight);
+            // Clearing depth buffer
+            for (var i = 0; i < this.depthbuffer.length; i++) {
+                // Max possible value 
+                this.depthbuffer[i] = 10000000;
+            }
         };
 
         // Once everything is ready, we can flush the back buffer into the front buffer. 
@@ -499,35 +506,47 @@ var SoftEngine;
         };
 
         // Called to put a pixel on screen at a specific X,Y coordinates
-        Device.prototype.putPixel = function (x, y, color) {
+        Device.prototype.putPixel = function (x, y, z, color) {
             this.backbufferdata = this.backbuffer.data;
             // As we have a 1-D Array for our back buffer
             // we need to know the equivalent cell index in 1-D based
             // on the 2D coordinates of the screen
-            var index = ((x >> 0) + (y >> 0) * this.workingWidth) * 4;
-            // RGBA color space is used by the HTML5 canvas
-            this.backbufferdata[index] = color.r * 255;
-            this.backbufferdata[index + 1] = color.g * 255;
-            this.backbufferdata[index + 2] = color.b * 255;
-            this.backbufferdata[index + 3] = color.a * 255;
+            var index = ((x >> 0) + (y >> 0) * this.workingWidth);
+            var index4 = index * 4;
+        
+            if(this.depthbuffer[index] < z) {
+                return; // Discard
+            }
+        
+            this.depthbuffer[index] = z;
+        
+            // RGBA color space is used by the HTML5 canvas 
+            this.backbufferdata[index4] = color.r * 255;
+            this.backbufferdata[index4 + 1] = color.g * 255;
+            this.backbufferdata[index4 + 2] = color.b * 255;
+            this.backbufferdata[index4 + 3] = color.a * 255;
         };
 
         // Project takes some 3D coordinates and transform them
         // in 2D coordinates using the transformation matrix
         Device.prototype.project = function (coord, transMat) {
+            // transforming the coordinates
             var point = Vector3.TransformCoordinates(coord, transMat);
             // The transformed coordinates will be based on coordinate system
             // starting on the center of the screen. But drawing on screen normally starts
             // from top left. We then need to transform them again to have x:0, y:0 on top left.
-            var x = point.x * this.workingWidth + this.workingWidth / 2.0 >> 0;
-            var y = -point.y * this.workingHeight + this.workingHeight / 2.0 >> 0;
-            return (new Vector2(x, y));
+            var x = point.x * this.workingWidth + this.workingWidth / 2.0;
+            var y = -point.y * this.workingHeight + this.workingHeight / 2.0;
+            return (new Vector3(x, y, point.z));
         };
 
         // drawPoint calls putPixel but does the clipping operation before
-        Device.prototype.drawPoint = function (point) {
-            if (point.x >= 0 && point.y >= 0 && point.x < this.workingWidth && point.y < this.workingHeight)
-                this.putPixel(point.x, point.y, new Color4(255, 0, 255, 1));
+        Device.prototype.drawPoint = function (point, color) {
+            // Clipping what's visible on screen
+            if(point.x >= 0 && point.y >= 0 && point.x < this.workingWidth && point.y < this.workingHeight) {
+                // Drawing a point
+                this.putPixel(point.x, point.y, point.z, color);
+            }
         };
 
         // The main method of the engine that re-compute each vertex projection
@@ -546,39 +565,143 @@ var SoftEngine;
 
                 var transformMatrix = worldMatrix.multiply(viewMatrix).multiply(projectionMatrix);
 
-                for (var i = 0; i < cMesh.Vertices.length -1; i++){
-                    var point0 = this.project(cMesh.Vertices[i], transformMatrix);
-                    var point1 = this.project(cMesh.Vertices[i + 1], transformMatrix);
-                    this.drawLine(point0, point1);
+                for (var indexFaces = 0; indexFaces < cMesh.Faces.length; indexFaces++) {
+                    var currentFace = cMesh.Faces[indexFaces];
+                    var vertexA = cMesh.Vertices[currentFace.A];
+                    var vertexB = cMesh.Vertices[currentFace.B];
+                    var vertexC = cMesh.Vertices[currentFace.C];
+
+                    var pixelA = this.project(vertexA, transformMatrix);
+                    var pixelB = this.project(vertexB, transformMatrix);
+                    var pixelC = this.project(vertexC, transformMatrix);
+
+                    
                 }
-
-                // for (var indexVertices = 0; indexVertices < cMesh.Vertices.length; indexVertices++) {
-                //     // First, we project the 3D coordinates into the 2D space
-                //     var projectedPoint = this.project(cMesh.Vertices[indexVertices], transformMatrix);
-                //     // Then we can draw on screen
-                //     this.drawPoint(projectedPoint);
-                // }
-
+                for (var indexFaces = 0; indexFaces < cMesh.Faces.length; indexFaces++) {
+                    var currentFace = cMesh.Faces[indexFaces];
+                    var vertexA = cMesh.Vertices[currentFace.A];
+                    var vertexB = cMesh.Vertices[currentFace.B];
+                    var vertexC = cMesh.Vertices[currentFace.C];
+                
+                    var pixelA = this.project(vertexA, transformMatrix);
+                    var pixelB = this.project(vertexB, transformMatrix);
+                    var pixelC = this.project(vertexC, transformMatrix);
+                
+                    var color = 0.25 + ((indexFaces % cMesh.Faces.length) / cMesh.Faces.length) * 0.75;
+                    // var color = 255;
+                    this.drawTriangle(pixelA, pixelB, pixelC, new Color4(color, 0, color, 1));
+                    // this.drawLine(pixelA, pixelB);
+                    // this.drawLine(pixelB, pixelC);
+                    // this.drawLine(pixelC, pixelA);
+                }
             }
         };
 
         Device.prototype.drawLine = function (point0, point1) {
-            var dist = point1.subtract(point0).length();
-            // If the distance between the 2 points is less than 2 pixels
-            // We're exiting
-            if(dist < 2) {
-                return;
+            var x0 = point0.x >> 0;
+            var y0 = point0.y >> 0;
+            var x1 = point1.x >> 0;
+            var y1 = point1.y >> 0;
+            var dx = Math.abs(x1 - x0);
+            var dy = Math.abs(y1 - y0);
+            var sx = (x0 < x1) ? 1 : -1;
+            var sy = (y0 < y1) ? 1 : -1;
+            var err = dx - dy;
+            while(true) {
+                this.drawPoint(new Vector2(x0, y0), new Color4(255, 0, 255, 1));
+                if((x0 == x1) && (y0 == y1)) break;
+                var e2 = 2 * err;
+                if(e2 > -dy) { err -= dy; x0 += sx; }
+                if(e2 < dx) { err += dx; y0 += sy; }
             }
-            // Find the middle point between first & second point
-            var middlePoint = point0.add(point1).scale(0.5);
-            // We draw this point on screen
-            this.drawPoint(middlePoint);
-            // Recursive algorithm launched between first & middle point
-            // and between middle & second point
-            this.drawLine(point0, middlePoint);
-            this.drawLine(middlePoint, point1);
         };
 
+        // Clamping values to keep them between 0 and 1
+        Device.prototype.clamp = function (value, min, max) {
+            if (typeof min === "undefined") { min = 0; }
+            if (typeof max === "undefined") { max = 1; }
+            return Math.max(min, Math.min(value, max));
+        };
+
+        // Interpolating the value between 2 vertices 
+        // min is the starting point, max the ending point
+        // and gradient the % between the 2 points
+        Device.prototype.interpolate = function (min, max, gradient) {
+            return min + (max - min) * this.clamp(gradient);
+        };
+        
+        // drawing line between 2 points from left to right
+        // papb -> pcpd
+        // pa, pb, pc, pd must then be sorted before
+        Device.prototype.processScanLine = function (y, pa, pb, pc, pd, color) {
+            // Thanks to current Y, we can compute the gradient to compute others values like
+            // the starting X (sx) and ending X (ex) to draw between
+            // if pa.Y == pb.Y or pc.Y == pd.Y, gradient is forced to 1
+            var gradient1 = pa.y != pb.y ? (y - pa.y) / (pb.y - pa.y) : 1;
+            var gradient2 = pc.y != pd.y ? (y - pc.y) / (pd.y - pc.y) : 1;
+
+            var sx = this.interpolate(pa.x, pb.x, gradient1) >> 0;
+            var ex = this.interpolate(pc.x, pd.x, gradient2) >> 0;
+
+            // starting Z & ending Z
+            var z1 = this.interpolate(pa.z, pb.z, gradient1);
+            var z2 = this.interpolate(pc.z, pd.z, gradient2);
+
+            // drawing a line from left (sx) to right (ex) 
+            for(var x = sx; x < ex; x++) {
+                var gradient = (x - sx) / (ex - sx);
+                var z = this.interpolate(z1, z2, gradient);
+                this.drawPoint(new Vector3(x, y, z), color);
+            }
+        };
+
+        Device.prototype.drawTriangle = function (p1, p2, p3, color) {
+            if(p1.y > p2.y) {
+                var temp = p2;
+                p2 = p1;
+                p1 = temp;
+            }
+            if(p2.y > p3.y) {
+                var temp = p2;
+                p2 = p3;
+                p3 = temp;
+            }
+            if(p1.y > p2.y) {
+                var temp = p2;
+                p2 = p1;
+                p1 = temp;
+            }
+            var dP1P2; var dP1P3;
+            if(p2.y - p1.y > 0) {
+                dP1P2 = (p2.x - p1.x) / (p2.y - p1.y);
+            } else {
+                dP1P2 = 0;
+            }
+        
+            if(p3.y - p1.y > 0) {
+                dP1P3 = (p3.x - p1.x) / (p3.y - p1.y);
+            } else {
+                dP1P3 = 0;
+            }
+            if(dP1P2 > dP1P3) {
+                for(var y = p1.y >> 0; y <= p3.y >> 0; y++) {
+                    if(y < p2.y) {
+                        this.processScanLine(y, p1, p3, p1, p2, color);
+                    } else {
+                        this.processScanLine(y, p1, p3, p2, p3, color);
+                    }
+                }
+            }
+            else {
+                for(var y = p1.y >> 0; y <= p3.y >> 0; y++) {
+                    if(y < p2.y) {
+                        this.processScanLine(y, p1, p2, p1, p3, color);
+                    } else {
+                        this.processScanLine(y, p2, p3, p1, p3, color);
+                    }
+                }
+            }
+        };
         return Device;
     })();
 
@@ -586,47 +709,150 @@ var SoftEngine;
 
 var canvas;
 var device;
-var mesh;
+var canvasMesh;
 var meshes = [];
 var mera;
 
 document.addEventListener("DOMContentLoaded", init, false);
 
-function init() {
-    canvas = document.getElementById("cnv");
-    mesh = new SoftEngine.Mesh("Cube", 8);
-    meshes.push(mesh);
-    mera = new SoftEngine.Camera();
-    device = new SoftEngine.Device(canvas);
+function getCubicMesh() {
+    var mesh = new SoftEngine.Mesh("Cube", 8, 12);
 
     mesh.Vertices[0] = new Vector3(-1, 1, 1);
     mesh.Vertices[1] = new Vector3(1, 1, 1);
     mesh.Vertices[2] = new Vector3(-1, -1, 1);
     mesh.Vertices[3] = new Vector3(1, -1, 1);
+
     mesh.Vertices[4] = new Vector3(-1, 1, -1);
     mesh.Vertices[5] = new Vector3(1, 1, -1);
     mesh.Vertices[6] = new Vector3(1, -1, -1);
     mesh.Vertices[7] = new Vector3(-1, -1, -1);
 
+    mesh.Faces[0] = { A:0, B:1, C:2 };
+    mesh.Faces[1] = { A:1, B:2, C:3 };
+    mesh.Faces[2] = { A:1, B:3, C:6 };
+    mesh.Faces[3] = { A:1, B:5, C:6 };
+    mesh.Faces[4] = { A:0, B:1, C:4 };
+    mesh.Faces[5] = { A:1, B:4, C:5 };
+    mesh.Faces[6] = { A:2, B:3, C:7 };
+    mesh.Faces[7] = { A:3, B:6, C:7 };
+    mesh.Faces[8] = { A:0, B:2, C:7 };
+    mesh.Faces[9] = { A:0, B:4, C:7 };
+    mesh.Faces[10] = { A:4, B:5, C:6 };
+    mesh.Faces[11] = { A:4, B:6, C:7 };
+
+    return mesh;
+}
+
+function getCylinderMesh() {
+    var sides = 10;
+    var height = 3;
+    var stepTheta = 2 * Math.PI / sides;
+
+    var sizeOfVertices = 2 * (sides + 1);
+    var sizeOfFaces = 2 * sides;
+    
+    var mesh = new SoftEngine.Mesh("Cylinder", sizeOfVertices, sizeOfFaces);
+    var theta = 0;
+    var i;
+    var curX, curY;
+    var nextIndex;
+
+    mesh.Vertices[0] = new Vector3(0, 0, height);
+
+    // Top Cap
+    for (i = 1;i < sides + 1; i += 1) {
+        curX = Number(Math.cos(theta).toFixed(2));
+        curY = Number(Math.sin(theta).toFixed(2));
+        mesh.Vertices[i] = new Vector3(curX, curY, height);
+        theta += stepTheta;
+    }
+    for (i = 1; i <= sides; i += 1) {
+        nextIndex = (i + 1) % (sides + 1);
+        if (nextIndex == 0) nextIndex = 1;
+        mesh.Faces[i - 1] = { A:0, B:i, C:nextIndex };
+    }
+    // Bottom Cap
+    height = 0;
+    theta = 0;
+    var lastIndex = 2 * sides + 1;
+    for (i = sides + 1; i < lastIndex; i += 1) {
+        curX = Number(Math.cos(theta).toFixed(2));
+        curY = Number(Math.sin(theta).toFixed(2));
+        mesh.Vertices[i] = new Vector3(curX, curY, height);
+        theta += stepTheta;
+    }
+    mesh.Vertices[lastIndex] = new Vector3(0, 0, height);
+    for (i = sides + 1; i < lastIndex; i += 1) {
+        nextIndex = (i + 1) % lastIndex;
+        if (nextIndex == 0) nextIndex = sides + 1;
+        mesh.Faces[i - 1] = { A:lastIndex, B:i, C:nextIndex };
+    }
+    // Top to bottom triangles
+    var j = sides + 1;
+    var m = 0;
+    while (m < sides) {
+        nextIndex = (m + 1) % (sides + 1);
+        if (nextIndex === 0) nextIndex = 1;
+        nextNextIndex = (nextIndex + 1) % (sides + 1);
+        if (nextNextIndex === 0) nextNextIndex = 1;
+
+        mesh.Faces.push({
+            A: j,
+            B: nextIndex,
+            C: nextNextIndex
+        });
+        j += 1; m += 1;
+    }
+    // Bottom to top triangles
+    m = sides + 1;
+    j = 2;
+    while (m < lastIndex) {
+        nextIndex = (m + 1) % (lastIndex);
+        if (nextIndex === 0) nextIndex = 1;
+        mesh.Faces.push({
+            A: j,
+            B: m,
+            C: nextIndex
+        });
+        j += 1; m += 1;
+    }
+    // mesh.Faces[12] = { A:7, B:1, C:2 };
+    // mesh.Faces[13] = { A:8, B:2, C:3 };
+    // mesh.Faces[14] = { A:9, B:3, C:4 };
+    // mesh.Faces[15] = { A:10, B:4, C:5 };
+    // mesh.Faces[16] = { A:11, B:5, C:6 };
+    // mesh.Faces[17] = { A:12, B:6, C:1 };
+
+    // mesh.Faces[18] = { A:2, B:7, C:8 };
+    // mesh.Faces[19] = { A:3, B:8, C:9 };
+    // mesh.Faces[20] = { A:4, B:9, C:10 };
+    // mesh.Faces[21] = { A:5, B:10, C:11 };
+    // mesh.Faces[22] = { A:6, B:11, C:12 };
+    // mesh.Faces[23] = { A:7, B:12, C:1 };
+
+    console.log(mesh.Faces)
+    console.log(mesh.Vertices)
+    return mesh;
+}
+
+function init() {
+    canvas = document.getElementById("cnv");
+    mera = new SoftEngine.Camera();
+    device = new SoftEngine.Device(canvas);
+    canvasMesh = getCylinderMesh();
+    meshes.push(canvasMesh);
     mera.Position = new Vector3(0, 0, 10);
     mera.Target = new Vector3(0, 0, 0);
-
-    // Calling the HTML5 rendering loop
     requestAnimationFrame(drawingLoop);
 }
 
-// Rendering loop handler
 function drawingLoop() {
     device.clear();
-
-    // rotating slightly the cube during each frame rendered
-    mesh.Rotation.x += 0.01;
-    mesh.Rotation.y += 0.01;
-    // mera.Position.z += 0.1;
-    // Doing the various matrix operations
+    canvasMesh.Rotation.x += 0.01;
+    canvasMesh.Rotation.y += 0.01;
+    canvasMesh.Rotation.z += 0.05;
     device.render(mera, meshes);
-    // Flushing the back buffer into the front buffer
     device.present();
-    // Calling the HTML5 rendering loop recursively
     requestAnimationFrame(drawingLoop);
 }
