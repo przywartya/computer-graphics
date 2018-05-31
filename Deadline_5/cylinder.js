@@ -745,7 +745,8 @@ function getCubicMesh() {
 }
 
 function getCylinderMesh() {
-    var sides = 10;
+    var centerOf = -1.5;
+    var sides = 13;
     var height = 3;
     var stepTheta = 2 * Math.PI / sides;
 
@@ -758,13 +759,13 @@ function getCylinderMesh() {
     var curX, curY;
     var nextIndex;
 
-    mesh.Vertices[0] = new Vector3(0, 0, height);
+    mesh.Vertices[0] = new Vector3(0, 0, centerOf + height);
 
     // Top Cap
     for (i = 1;i < sides + 1; i += 1) {
         curX = Number(Math.cos(theta).toFixed(2));
         curY = Number(Math.sin(theta).toFixed(2));
-        mesh.Vertices[i] = new Vector3(curX, curY, height);
+        mesh.Vertices[i] = new Vector3(curX, curY, centerOf + height);
         theta += stepTheta;
     }
     for (i = 1; i <= sides; i += 1) {
@@ -773,7 +774,7 @@ function getCylinderMesh() {
         mesh.Faces[i - 1] = { A:0, B:i, C:nextIndex };
     }
     // Bottom Cap
-    height = 0;
+    height = centerOf;
     theta = 0;
     var lastIndex = 2 * sides + 1;
     for (i = sides + 1; i < lastIndex; i += 1) {
@@ -842,7 +843,7 @@ function init() {
     device = new SoftEngine.Device(canvas);
     canvasMesh = getCylinderMesh();
     meshes.push(canvasMesh);
-    mera.Position = new Vector3(0, 0, 10);
+    mera.Position = new Vector3(0, 0, 15);
     mera.Target = new Vector3(0, 0, 0);
     requestAnimationFrame(drawingLoop);
 }
@@ -850,8 +851,8 @@ function init() {
 function drawingLoop() {
     device.clear();
     canvasMesh.Rotation.x += 0.01;
-    canvasMesh.Rotation.y += 0.01;
-    canvasMesh.Rotation.z += 0.05;
+    canvasMesh.Rotation.y += 0.005;
+    // canvasMesh.Rotation.z += 0.05;
     device.render(mera, meshes);
     device.present();
     requestAnimationFrame(drawingLoop);
