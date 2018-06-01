@@ -30,12 +30,13 @@
       <p>
         What to change? 1. Rewrite matrix, vector etc. to only include the standard methods. Add translations to other functions.
         2. Zamienic z buffern= na back culling
-        3. Dodac switch miedzy mesh a texture
+        3. Zamienic gourard shading na phong shading, dodac material.
+        4. Dodac switch miedzy mesh, texture i shaded texture.
       </p>
       Rotate around: <input type="checkbox" id="rotate">
-      Set height: <input type="range" min="1" max="10" value="3" id="height"  onchange="resetMesh()">
-      Set divisions: <input type="range" min="3" max="50" value="13" id="divisions"  onchange="resetMesh()">
-      Set radius: <input type="range" min="0.5" max="5" step="0.5" value="1" id="radius"  onchange="resetMesh()">
+      Set height: <input type="range" min="1" max="10" value="1" id="height"  onchange="resetMesh()">
+      Set divisions: <input type="range" min="3" max="50" value="15" id="divisions"  onchange="resetMesh()">
+      Set radius: <input type="range" min="0.5" max="5" step="0.5" value="3" id="radius"  onchange="resetMesh()">
     <div>
       <canvas id="cnv" width="480" height="220" style="background-color: black;"></canvas>
     </div>
