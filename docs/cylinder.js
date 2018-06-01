@@ -850,10 +850,34 @@ function init() {
 
 function drawingLoop() {
     device.clear();
-    canvasMesh.Rotation.x += 0.01;
-    canvasMesh.Rotation.y += 0.005;
+    canvasMesh.Rotation.x += 0.001;
+    canvasMesh.Rotation.y += 0.001;
     // canvasMesh.Rotation.z += 0.05;
     device.render(mera, meshes);
     device.present();
     requestAnimationFrame(drawingLoop);
 }
+
+var mouseX; var mouseY; var mouseClicked = false; var differenceX; var differenceY;
+
+function startMouse(event) {
+    mouseX = event.clientX;
+    mouseY = event.clientY;
+    mouseClicked = true;
+}
+
+
+function handleMouse(event) {
+    if (mouseClicked) {
+        differenceX = (mouseX - event.clientX) / 5000;
+        differenceY = (mouseY - event.clientY) / 5000;
+        if (differenceX) canvasMesh.Rotation.y += differenceX;
+        if (differenceY) canvasMesh.Rotation.x += differenceY;
+    }
+}
+
+function stopMouse(event) { mouseClicked = false; }
+
+document.addEventListener("mousedown", startMouse, false);
+document.addEventListener("mousemove", handleMouse, false);
+document.addEventListener("mouseup", stopMouse, false);
