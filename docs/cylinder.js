@@ -878,6 +878,11 @@ function handleMouse(event) {
 
 function stopMouse(event) { mouseClicked = false; }
 
+function wheelStart(event) {
+    mera.Position.z += event.deltaY / 100;
+}
+
 document.addEventListener("mousedown", startMouse, false);
 document.addEventListener("mousemove", handleMouse, false);
 document.addEventListener("mouseup", stopMouse, false);
+document.addEventListener("wheel", wheelStart, false);
