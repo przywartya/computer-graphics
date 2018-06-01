@@ -882,7 +882,15 @@ function wheelStart(event) {
     mera.Position.z += event.deltaY / 100;
 }
 
+function handleKeyboard(event) {
+    if (event.code === "KeyW") mera.Target.y -= 0.1;
+    if (event.code === "KeyS") mera.Target.y += 0.1;
+    if (event.code === "KeyA") mera.Target.x -= 0.1;
+    if (event.code === "KeyD") mera.Target.x += 0.1;
+}
+
 document.addEventListener("mousedown", startMouse, false);
 document.addEventListener("mousemove", handleMouse, false);
 document.addEventListener("mouseup", stopMouse, false);
 document.addEventListener("wheel", wheelStart, false);
+document.addEventListener("keydown", handleKeyboard, false);
