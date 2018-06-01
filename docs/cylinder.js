@@ -713,6 +713,9 @@ var canvasMesh;
 var meshes = [];
 var mera;
 var checkBox = document.getElementById("rotate");
+var cylinderHeight = document.getElementById("height");
+var cylinderDivisions = document.getElementById("divisions");
+var cylinderRadius = document.getElementById("radius");
 
 document.addEventListener("DOMContentLoaded", init, false);
 
@@ -746,14 +749,14 @@ function getCubicMesh() {
 }
 
 function getCylinderMesh() {
-    var centerOf = -1.5;
-    var sides = 13;
-    var height = 3;
-    var stepTheta = 2 * Math.PI / sides;
+    var sides = Number(cylinderDivisions.value);
+    var height = Number(cylinderHeight.value);
+    var radius = Number(cylinderRadius.value);
 
+    var centerOf = -height / 2;
+    var stepTheta = 2 * Math.PI / sides;
     var sizeOfVertices = 2 * (sides + 1);
     var sizeOfFaces = 2 * sides;
-    
     var mesh = new SoftEngine.Mesh("Cylinder", sizeOfVertices, sizeOfFaces);
     var theta = 0;
     var i;
@@ -764,8 +767,8 @@ function getCylinderMesh() {
 
     // Top Cap
     for (i = 1;i < sides + 1; i += 1) {
-        curX = Number(Math.cos(theta).toFixed(2));
-        curY = Number(Math.sin(theta).toFixed(2));
+        curX = Number(Math.cos(theta).toFixed(2)) * radius;
+        curY = Number(Math.sin(theta).toFixed(2)) * radius;
         mesh.Vertices[i] = new Vector3(curX, curY, centerOf + height);
         theta += stepTheta;
     }
@@ -779,8 +782,8 @@ function getCylinderMesh() {
     theta = 0;
     var lastIndex = 2 * sides + 1;
     for (i = sides + 1; i < lastIndex; i += 1) {
-        curX = Number(Math.cos(theta).toFixed(2));
-        curY = Number(Math.sin(theta).toFixed(2));
+        curX = Number(Math.cos(theta).toFixed(2)) * radius;
+        curY = Number(Math.sin(theta).toFixed(2)) * radius;
         mesh.Vertices[i] = new Vector3(curX, curY, height);
         theta += stepTheta;
     }
@@ -790,7 +793,7 @@ function getCylinderMesh() {
         if (nextIndex == 0) nextIndex = sides + 1;
         mesh.Faces[i - 1] = { A:lastIndex, B:i, C:nextIndex };
     }
-    // Top to bottom triangles
+    // Top to bottom faces
     var j = sides + 1;
     var m = 0;
     while (m < sides) {
@@ -806,7 +809,7 @@ function getCylinderMesh() {
         });
         j += 1; m += 1;
     }
-    // Bottom to top triangles
+    // Bottom to top faces
     m = sides + 1;
     j = 2;
     while (m < lastIndex) {
@@ -850,13 +853,15 @@ function init() {
 }
 
 function drawingLoop() {
-    device.clear();
-    canvasMesh.Rotation.x += 0.001;
-    canvasMesh.Rotation.y += 0.001;
-    if (checkBox.checked) canvasMesh.Rotation.z += 0.1; else canvasMesh.Rotation.z = canvasMesh.Rotation.z;
-    device.render(mera, meshes);
-    device.present();
-    requestAnimationFrame(drawingLoop);
+    if (canvasMesh) {
+        device.clear();
+        canvasMesh.Rotation.x += 0.001;
+        canvasMesh.Rotation.y += 0.001;
+        if (checkBox.checked) canvasMesh.Rotation.z += 0.05; else canvasMesh.Rotation.z = canvasMesh.Rotation.z;
+        device.render(mera, meshes);
+        device.present();
+        requestAnimationFrame(drawingLoop);
+    }
 }
 
 var mouseX; var mouseY; var mouseClicked = false; var differenceX; var differenceY;
@@ -867,6 +872,13 @@ function startMouse(event) {
     mouseClicked = true;
 }
 
+function resetMesh() {
+    canvasMesh = null;
+    device.clear();
+    canvasMesh = getCylinderMesh();
+    meshes.pop(); meshes.push(canvasMesh);
+    requestAnimationFrame(drawingLoop);
+}
 
 function handleMouse(event) {
     if (mouseClicked) {
