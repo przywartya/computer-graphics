@@ -712,6 +712,7 @@ var device;
 var canvasMesh;
 var meshes = [];
 var mera;
+var checkBox = document.getElementById("rotate");
 
 document.addEventListener("DOMContentLoaded", init, false);
 
@@ -852,7 +853,7 @@ function drawingLoop() {
     device.clear();
     canvasMesh.Rotation.x += 0.001;
     canvasMesh.Rotation.y += 0.001;
-    // canvasMesh.Rotation.z += 0.05;
+    if (checkBox.checked) canvasMesh.Rotation.z += 0.1; else canvasMesh.Rotation.z = canvasMesh.Rotation.z;
     device.render(mera, meshes);
     device.present();
     requestAnimationFrame(drawingLoop);
@@ -878,9 +879,7 @@ function handleMouse(event) {
 
 function stopMouse(event) { mouseClicked = false; }
 
-function wheelStart(event) {
-    mera.Position.z += event.deltaY / 100;
-}
+function wheelStart(event) {  mera.Position.z += event.deltaY / 100; }
 
 function handleKeyboard(event) {
     if (event.code === "KeyW") mera.Target.y -= 0.1;
