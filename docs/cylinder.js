@@ -280,80 +280,6 @@ var Color4 = (function () {
     };
     return Color4;
 })();
-var Vector2 = (function () {
-    function Vector2(initialX, initialY) {
-        this.x = initialX;
-        this.y = initialY;
-    }
-    Vector2.prototype.toString = function () {
-        return "{X: " + this.x + " Y:" + this.y + "}";
-    };
-    Vector2.prototype.add = function (otherVector) {
-        return new Vector2(this.x + otherVector.x, this.y + otherVector.y);
-    };
-    Vector2.prototype.subtract = function (otherVector) {
-        return new Vector2(this.x - otherVector.x, this.y - otherVector.y);
-    };
-    Vector2.prototype.negate = function () {
-        return new Vector2(-this.x, -this.y);
-    };
-    Vector2.prototype.scale = function (scale) {
-        return new Vector2(this.x * scale, this.y * scale);
-    };
-    Vector2.prototype.equals = function (otherVector) {
-        return this.x === otherVector.x && this.y === otherVector.y;
-    };
-    Vector2.prototype.length = function () {
-        return Math.sqrt(this.x * this.x + this.y * this.y);
-    };
-    Vector2.prototype.lengthSquared = function () {
-        return (this.x * this.x + this.y * this.y);
-    };
-    Vector2.prototype.normalize = function () {
-        var len = this.length();
-        if(len === 0) {
-            return;
-        }
-        var num = 1.0 / len;
-        this.x *= num;
-        this.y *= num;
-    };
-    Vector2.Zero = function Zero() {
-        return new Vector2(0, 0);
-    };
-    Vector2.Copy = function Copy(source) {
-        return new Vector2(source.x, source.y);
-    };
-    Vector2.Normalize = function Normalize(vector) {
-        var newVector = Vector2.Copy(vector);
-        newVector.normalize();
-        return newVector;
-    };
-    Vector2.Minimize = function Minimize(left, right) {
-        var x = (left.x < right.x) ? left.x : right.x;
-        var y = (left.y < right.y) ? left.y : right.y;
-        return new Vector2(x, y);
-    };
-    Vector2.Maximize = function Maximize(left, right) {
-        var x = (left.x > right.x) ? left.x : right.x;
-        var y = (left.y > right.y) ? left.y : right.y;
-        return new Vector2(x, y);
-    };
-    Vector2.Transform = function Transform(vector, transformation) {
-        var x = (vector.x * transformation.m[0]) + (vector.y * transformation.m[4]);
-        var y = (vector.x * transformation.m[1]) + (vector.y * transformation.m[5]);
-        return new Vector2(x, y);
-    };
-    Vector2.Distance = function Distance(value1, value2) {
-        return Math.sqrt(Vector2.DistanceSquared(value1, value2));
-    };
-    Vector2.DistanceSquared = function DistanceSquared(value1, value2) {
-        var x = value1.x - value2.x;
-        var y = value1.y - value2.y;
-        return (x * x) + (y * y);
-    };
-    return Vector2;
-})();
 var Vector3 = (function () {
     function Vector3(initialX, initialY, initialZ) {
         this.x = initialX;
@@ -415,13 +341,6 @@ var Vector3 = (function () {
     Vector3.Copy = function Copy(source) {
         return new Vector3(source.x, source.y, source.z);
     };
-    Vector3.TransformCoordinates = function TransformCoordinates(vector, transformation) {
-        var x = (vector.x * transformation.m[0]) + (vector.y * transformation.m[4]) + (vector.z * transformation.m[8]) + transformation.m[12];
-        var y = (vector.x * transformation.m[1]) + (vector.y * transformation.m[5]) + (vector.z * transformation.m[9]) + transformation.m[13];
-        var z = (vector.x * transformation.m[2]) + (vector.y * transformation.m[6]) + (vector.z * transformation.m[10]) + transformation.m[14];
-        var w = (vector.x * transformation.m[3]) + (vector.y * transformation.m[7]) + (vector.z * transformation.m[11]) + transformation.m[15];
-        return new Vector3(x / w, y / w, z / w);
-    };
     Vector3.TransformNormal = function TransformNormal(vector, transformation) {
         var x = (vector.x * transformation.m[0]) + (vector.y * transformation.m[4]) + (vector.z * transformation.m[8]);
         var y = (vector.x * transformation.m[1]) + (vector.y * transformation.m[5]) + (vector.z * transformation.m[9]);
@@ -451,20 +370,16 @@ var Vector3 = (function () {
         var z = value1.z - value2.z;
         return (x * x) + (y * y) + (z * z);
     };
+    Vector3.TransformCoordinates = function TransformCoordinates(vector, transformation) {
+        var x = (vector.x * transformation.m[0]) + (vector.y * transformation.m[4]) + (vector.z * transformation.m[8]) + transformation.m[12];
+        var y = (vector.x * transformation.m[1]) + (vector.y * transformation.m[5]) + (vector.z * transformation.m[9]) + transformation.m[13];
+        var z = (vector.x * transformation.m[2]) + (vector.y * transformation.m[6]) + (vector.z * transformation.m[10]) + transformation.m[14];
+        var w = (vector.x * transformation.m[3]) + (vector.y * transformation.m[7]) + (vector.z * transformation.m[11]) + transformation.m[15];
+        return new Vector3(x / w, y / w, z / w);
+    };
     return Vector3;
 })();
 
-
-var canvas;
-var device;
-var canvasMesh;
-var meshes = [];
-var mera;
-var checkBox = document.getElementById("rotate");
-var cylinderHeight = document.getElementById("height");
-var cylinderDivisions = document.getElementById("divisions");
-var cylinderRadius = document.getElementById("radius");
-document.addEventListener("DOMContentLoaded", init, false);
 
 var SoftEngine;
 (function (SoftEngine) {
@@ -477,10 +392,10 @@ var SoftEngine;
     })();    
 
     SoftEngine.Mesh = (function () {
-        function Mesh(name, facesCount) {
+        function Mesh(name) {
             this.name = name;
             this.Vertices = [];
-            this.Faces = new Array(facesCount);
+            this.Faces = [];
             this.Rotation = Vector3.Zero();
             this.Position = Vector3.Zero();
         }
@@ -489,72 +404,37 @@ var SoftEngine;
 
     SoftEngine.Device = (function () {
         function Device(canvas) {
-            // Note: the back buffer size is equal to the number of pixels to draw
-            // on screen (width*height) * 4 (R,G,B & Alpha values).
             this.workingCanvas = canvas;
             this.workingWidth = canvas.width;
             this.workingHeight = canvas.height;
             this.workingContext = this.workingCanvas.getContext("2d");
-            this.depthbuffer = new Array(this.workingWidth * this.workingHeight);
+            this.lightPosition = new Vector3(0, 100, 250);
+            this.color = new Color4(180, 80, 20, 1 );
+            this.lightIntensity = new Vector3(0.2, 0.2, 0.2);
         }
 
-        // This function is called to clear the back buffer with a specific color
         Device.prototype.clear = function () {
-            // Clearing with black color by default
             this.workingContext.clearRect(0, 0, this.workingWidth, this.workingHeight);
-            // once cleared with black pixels, we're getting back the associated image data to clear out back buffer
             this.backbuffer = this.workingContext.getImageData(0, 0, this.workingWidth, this.workingHeight);
-            // Clearing depth buffer
-            for (var i = 0; i < this.depthbuffer.length; i++) {
-                // Max possible value 
-                this.depthbuffer[i] = 10000000;
-            }
         };
 
-        // Once everything is ready, we can flush the back buffer into the front buffer. 
-        Device.prototype.present = function () {
-            this.workingContext.putImageData(this.backbuffer, 0, 0);
-        };
+        Device.prototype.present = function () { this.workingContext.putImageData(this.backbuffer, 0, 0) };
 
-        // Called to put a pixel on screen at a specific X,Y coordinates
+        Device.prototype.interpolate = function (min, max, gradient) { return min + (max - min) * Math.max(0, Math.min(gradient, 1)) };
+
         Device.prototype.putPixel = function (x, y, z, color) {
             this.backbufferdata = this.backbuffer.data;
-            // As we have a 1-D Array for our back buffer
-            // we need to know the equivalent cell index in 1-D based
-            // on the 2D coordinates of the screen
-            var index = ((x >> 0) + (y >> 0) * this.workingWidth);
-            var index4 = index * 4;
-        
-            if(this.depthbuffer[index] < z) {
-                return; // Discard
-            }
-        
-            this.depthbuffer[index] = z;
-        
-            // RGBA color space is used by the HTML5 canvas 
-            this.backbufferdata[index4] = color.r * 255;
-            this.backbufferdata[index4 + 1] = color.g * 255;
-            this.backbufferdata[index4 + 2] = color.b * 255;
-            this.backbufferdata[index4 + 3] = color.a * 255;
+            var index = ((x >> 0) + (y >> 0) * this.workingWidth) * 4;
+            this.backbufferdata[index] = color.r * 255;
+            this.backbufferdata[index + 1] = color.g * 255;
+            this.backbufferdata[index + 2] = color.b * 255;
+            this.backbufferdata[index + 3] = color.a * 255;
         };
 
-        // drawPoint calls putPixel but does the clipping operation before
         Device.prototype.drawPoint = function (point, color) {
-            // Clipping what's visible on screen
             if(point.x >= 0 && point.y >= 0 && point.x < this.workingWidth && point.y < this.workingHeight) {
-                // Drawing a point
                 this.putPixel(point.x, point.y, point.z, color);
             }
-        };
-
-        Device.prototype.clamp = function (value, min, max) {
-            if (typeof min === "undefined") { min = 0; }
-            if (typeof max === "undefined") { max = 1; }
-            return Math.max(min, Math.min(value, max));
-        };
-
-        Device.prototype.interpolate = function (min, max, gradient) {
-            return min + (max - min) * this.clamp(gradient);
         };
 
         Device.prototype.project = function (vertex, transMat, world) {
@@ -570,145 +450,44 @@ var SoftEngine;
             });
         };
 
-        Device.prototype.computeNDotL = function (vertex, normal, lightPosition) {
-            var lightDirection = lightPosition.subtract(vertex);
-            normal.normalize();
-            lightDirection.normalize();
-            return Math.max(0, Vector3.Dot(normal, lightDirection));
-        };
-        
-        Device.prototype.processScanLine = function (data, va, vb, vc, vd, color) {
-            var pa = va.Coordinates;
-            var pb = vb.Coordinates;
-            var pc = vc.Coordinates;
-            var pd = vd.Coordinates;
-            var gradient1 = pa.y != pb.y ? (data.currentY - pa.y) / (pb.y - pa.y) : 1;
-            var gradient2 = pc.y != pd.y ? (data.currentY - pc.y) / (pd.y - pc.y) : 1;
-            var sx = this.interpolate(pa.x, pb.x, gradient1) >> 0;
-            var ex = this.interpolate(pc.x, pd.x, gradient2) >> 0;
-            var z1 = this.interpolate(pa.z, pb.z, gradient1);
-            var z2 = this.interpolate(pc.z, pd.z, gradient2);
-            var snl = this.interpolate(data.ndotla, data.ndotlb, gradient1);
-            var enl = this.interpolate(data.ndotlc, data.ndotld, gradient2);
-            for (var x = sx; x < ex; x++) {
-                var gradient = (x - sx) / (ex - sx);
-                var z = this.interpolate(z1, z2, gradient);
-                var ndotl = this.interpolate(snl, enl, gradient);
-                this.drawPoint(new Vector3(x, data.currentY, z), new Color4(color.r * ndotl, color.g * ndotl, color.b * ndotl, 1));
-            }
-        };
-
-
-        Device.prototype.drawTriangle = function (v1, v2, v3, color) {
-            if (v1.Coordinates.y > v2.Coordinates.y) {
-                var temp = v2;
-                v2 = v1;
-                v1 = temp;
-            }
-            if (v2.Coordinates.y > v3.Coordinates.y) {
-                var temp = v2;
-                v2 = v3;
-                v3 = temp;
-            }
-            if (v1.Coordinates.y > v2.Coordinates.y) {
-                var temp = v2;
-                v2 = v1;
-                v1 = temp;
-            }
-            var p1 = v1.Coordinates;
-            var p2 = v2.Coordinates;
-            var p3 = v3.Coordinates;
-            var lightPos = new Vector3(0, 10, 0);
-            var nl1 = this.computeNDotL(v1.WorldCoordinates, v1.Normal, lightPos);
-            var nl2 = this.computeNDotL(v2.WorldCoordinates, v2.Normal, lightPos);
-            var nl3 = this.computeNDotL(v3.WorldCoordinates, v3.Normal, lightPos);
-            var data = {};
-            var dP1P2;
-            var dP1P3;
-            if (p2.y - p1.y > 0) dP1P2 = (p2.x - p1.x) / (p2.y - p1.y); else dP1P2 = 0;
-            if (p3.y - p1.y > 0) dP1P3 = (p3.x - p1.x) / (p3.y - p1.y); else dP1P3 = 0;
-            if (dP1P2 > dP1P3) {
-                for (var y = p1.y >> 0; y <= p3.y >> 0; y++) {
-                    data.currentY = y;
-                    if (y < p2.y) {
-                        data.ndotla = nl1;
-                        data.ndotlb = nl3;
-                        data.ndotlc = nl1;
-                        data.ndotld = nl2;
-                        this.processScanLine(data, v1, v3, v1, v2, color);
-                    } else {
-                        data.ndotla = nl1;
-                        data.ndotlb = nl3;
-                        data.ndotlc = nl2;
-                        data.ndotld = nl3;
-                        this.processScanLine(data, v1, v3, v2, v3, color);
-                    }
-                }
-            } else {
-                for (var y = p1.y >> 0; y <= p3.y >> 0; y++) {
-                    data.currentY = y;
-                    if (y < p2.y) {
-                        data.ndotla = nl1;
-                        data.ndotlb = nl2;
-                        data.ndotlc = nl1;
-                        data.ndotld = nl3;
-                        this.processScanLine(data, v1, v2, v1, v3, color);
-                    } else {
-                        data.ndotla = nl2;
-                        data.ndotlb = nl3;
-                        data.ndotlc = nl1;
-                        data.ndotld = nl3;
-                        this.processScanLine(data, v2, v3, v1, v3, color);
-                    }
-                }
-            }
-        };
-
-
-        // The main method of the engine that re-compute each vertex projection
-        // during each frame
-        Device.prototype.render = function (camera, meshes) {
-            // To understand this part, please read the prerequisites resources
+        Device.prototype.render = function (camera, mesh) {
+            this.cameraPosition = camera.Position;
             var viewMatrix = Matrix.LookAtLH(camera.Position, camera.Target, Vector3.Up());
             var projectionMatrix = Matrix.PerspectiveFovLH(0.78, this.workingWidth / this.workingHeight, 0.01, 1.0);
-            for (var index = 0; index < meshes.length; index++) {
-                // current mesh to work on
-                var cMesh = meshes[index];
-                var rotY = cMesh.Rotation.y, rotX =  cMesh.Rotation.x, rotZ = cMesh.Rotation.z;
-                var posY = cMesh.Position.y, posX =  cMesh.Position.x, posZ = cMesh.Position.z;
-                // Beware to apply rotation before translation
-                var worldMatrix = Matrix.RotationYawPitchRoll(rotY, rotX, rotZ).multiply(Matrix.Translation(posX, posY, posZ));
-                var transformMatrix = worldMatrix.multiply(viewMatrix).multiply(projectionMatrix);
-                for (var indexFaces = 0; indexFaces < cMesh.Faces.length; indexFaces++) {
-                    var currentFace = cMesh.Faces[indexFaces];
-                    var vertexA = cMesh.Vertices[currentFace.A];
-                    var vertexB = cMesh.Vertices[currentFace.B];
-                    var vertexC = cMesh.Vertices[currentFace.C];
-                    var pixelA = this.project(vertexA, transformMatrix, worldMatrix);
-                    var pixelB = this.project(vertexB, transformMatrix, worldMatrix);
-                    var pixelC = this.project(vertexC, transformMatrix, worldMatrix);
-                
-                    var color = 1.0;
-                    this.drawTriangle(pixelA, pixelB, pixelC, new Color4(color, color, color, 1));
-                    // this.drawLine(pixelA, pixelB);
-                    // this.drawLine(pixelB, pixelC);
-                    // this.drawLine(pixelC, pixelA);
+            var rot = mesh.Rotation; 
+            var pos = mesh.Position;
+            var worldMatrix = Matrix.RotationYawPitchRoll(rot.y, rot.x, rot.z).multiply(Matrix.Translation(pos.x, pos.y, pos.z));
+            var transformMatrix =  worldMatrix.multiply(viewMatrix).multiply(projectionMatrix);
+            mesh.Faces.forEach((face) => {
+                var vertexA = mesh.Vertices[face.A]; var vertexB = mesh.Vertices[face.B]; var vertexC = mesh.Vertices[face.C];
+                var A = this.project(vertexA, transformMatrix, worldMatrix);
+                var B = this.project(vertexB, transformMatrix, worldMatrix);
+                var C = this.project(vertexC, transformMatrix, worldMatrix);
+                if (this.getCrossProductFromBackFaceCulling(A, B, C).z > 0) {
+                    if (showMesh.checked) { 
+                        this.drawLine(A, B); this.drawLine(B, C); this.drawLine(C, A);
+                    } else {
+                        this.drawTriangle(A, B, C);
+                    }
                 }
-            }
+            });
         };
 
-        Device.prototype.drawLine = function (point0, point1) {
-            var x0 = point0.x >> 0;
-            var y0 = point0.y >> 0;
-            var x1 = point1.x >> 0;
-            var y1 = point1.y >> 0;
-            var dx = Math.abs(x1 - x0);
-            var dy = Math.abs(y1 - y0);
-            var sx = (x0 < x1) ? 1 : -1;
-            var sy = (y0 < y1) ? 1 : -1;
+        Device.prototype.getCrossProductFromBackFaceCulling = function (pixelA, pixelB, pixelC) {
+            x1 = pixelA.Coordinates.x; x2 = pixelB.Coordinates.x; x3 = pixelC.Coordinates.x;
+            y1 = pixelA.Coordinates.y; y2 = pixelB.Coordinates.y; y3 = pixelC.Coordinates.y;
+            return Vector3.Cross(new Vector3(x2 - x1, y2 - y1, 0), new Vector3(x3 - x1, y3 - y1, 0));
+        };
+
+        Device.prototype.drawLine = function (vertex0, vertex1) {
+            var point0 = vertex0.Coordinates; var point1 = vertex1.Coordinates;
+            var x0 = point0.x >> 0; var y0 = point0.y >> 0; 
+            var x1 = point1.x >> 0; var y1 = point1.y >> 0;
+            var dx = Math.abs(x1 - x0); var dy = Math.abs(y1 - y0);
+            var sx = (x0 < x1) ? 1 : -1; var sy = (y0 < y1) ? 1 : -1;
             var err = dx - dy;
             while(true) {
-                this.drawPoint(new Vector2(x0, y0), new Color4(255, 0, 255, 1));
+                this.drawPoint(new Vector3(x0, y0, 0), this.color);
                 if((x0 == x1) && (y0 == y1)) break;
                 var e2 = 2 * err;
                 if(e2 > -dy) { err -= dy; x0 += sx; }
@@ -716,141 +495,181 @@ var SoftEngine;
             }
         };
 
+        Device.prototype.drawTriangle = function (v1, v2, v3) {
+            if (v1.Coordinates.y > v2.Coordinates.y) { var temp = v2; v2 = v1; v1 = temp; }
+            if (v2.Coordinates.y > v3.Coordinates.y) { var temp = v2; v2 = v3; v3 = temp; }
+            if (v1.Coordinates.y > v2.Coordinates.y) { var temp = v2; v2 = v1; v1 = temp; }
+            var p1 = v1.Coordinates; var p2 = v2.Coordinates; var p3 = v3.Coordinates; var dP1P2; var dP1P3;
+            (p2.y - p1.y > 0) ? dP1P2 = (p2.x - p1.x) / (p2.y - p1.y) : dP1P2 = 0;
+            (p3.y - p1.y > 0) ? dP1P3 = (p3.x - p1.x) / (p3.y - p1.y) : dP1P3 = 0;
+            for (var y = p1.y >> 0; y <= p3.y >> 0; y++) {
+                if (dP1P2 > dP1P3) {
+                    y < p2.y ? this.processScanLine(y, v1, v3, v1, v2) : this.processScanLine(y, v1, v3, v2, v3);
+                } else {
+                    y < p2.y ? this.processScanLine(y, v1, v2, v1, v3) : this.processScanLine(y, v2, v3, v1, v3);
+                }
+            }
+        };
+
+        Device.prototype.processScanLine = function (currentY, va, vb, vc, vd) {
+            // Phong equation: I = Ia + Id + Is
+            // Ia = Ka (uniform constant value)
+            // Id = Kd * I * (n dotprod l)
+            // Is = Ks * I * (r dotprod v)^m
+            var Ia = new Vector3(0.001, 0.001, 0.001); // AMBIENT REFLECTION
+            var pa = va.Coordinates; var pb = vb.Coordinates; var pc = vc.Coordinates; var pd = vd.Coordinates;
+            var gradient1 = pa.y != pb.y ? (currentY - pa.y) / (pb.y - pa.y) : 1;
+            var gradient2 = pc.y != pd.y ? (currentY - pc.y) / (pd.y - pc.y) : 1;
+            var sx = this.interpolate(pa.x, pb.x, gradient1) >> 0; var ex = this.interpolate(pc.x, pd.x, gradient2) >> 0;
+            var z1 = this.interpolate(pa.z, pb.z, gradient1); var z2 = this.interpolate(pc.z, pd.z, gradient2);
+            var v1Normal = va.Normal.scale(1 - gradient1).add(vb.Normal.scale(gradient1));
+            var v2Normal = vc.Normal.scale(1 - gradient2).add(vd.Normal.scale(gradient2));
+            for (var x = sx; x < ex; x++) {
+                var gradient = (x - sx) / (ex - sx);
+                var v3Normal = v1Normal.scale(1 - gradient).add(v2Normal.scale(gradient));
+                var z = this.interpolate(z1, z2, gradient);
+                var currentPoint = new Vector3(x, currentY, z);
+                var Id = this.computeDiffusionReflection(currentPoint, v3Normal);
+                var Is = this.computeSpecularReflection(currentPoint, v3Normal);
+                var phong = Ia.add(Id).add(Is);
+                this.drawPoint(currentPoint, new Color4(this.color.r * phong.x, this.color.g * phong.y, this.color.b * phong.z, 1));
+            }
+        };
+
+        Device.prototype.computeSpecularReflection = function (vertex, normal) {
+            var Ks = new Vector3(0.5, 0.5, 0.5);
+            var lightDirection = this.getLightDirection(vertex);
+            var v = this.cameraPosition.subtract(vertex);
+            v.normalize();
+            var ndotl = Math.max(0, Vector3.Dot(normal, lightDirection));
+            var r = normal.scale(2 * ndotl).subtract(lightDirection);
+            var rdotv = Math.max(0, Math.pow(Vector3.Dot(r, v), 150));
+            return Ks.multiply(this.lightIntensity).scale(rdotv);
+        };
+
+        Device.prototype.computeDiffusionReflection = function (vertex, normal) {
+            var Kd = new Vector3(0.1, 0.1, 0.1);
+            var lightDirection = this.getLightDirection(vertex);
+            var ndotl = Math.max(0, Vector3.Dot(normal, lightDirection));
+            return Kd.multiply(this.lightIntensity).scale(ndotl);
+        };
+
+        Device.prototype.getLightDirection = function (vertex) {
+            var lightDirection = this.lightPosition.subtract(vertex);
+            lightDirection.normalize();
+            return lightDirection;
+        }
+        
         return Device;
     })();
 
 })(SoftEngine || (SoftEngine = {}));
 
+var canvas; var device; var canvasMesh; var meshes = []; var camera;
+var showMesh = document.getElementById("mesh");
+var checkBox = document.getElementById("rotate");
+var cylinderHeight = document.getElementById("height");
+var cylinderDivisions = document.getElementById("divisions");
+var cylinderRadius = document.getElementById("radius");
+document.addEventListener("DOMContentLoaded", init, false);
 
 function getCylinderMesh() {
-    var sides = Number(cylinderDivisions.value);
+    var n = Number(cylinderDivisions.value);
     var height = Number(cylinderHeight.value);
     var radius = Number(cylinderRadius.value);
-    var centerOf = -height / 2;
-    // var centerOf = 0;
-    var stepTheta = 2 * Math.PI / sides;
-    var sizeOfVertices = 2 * (sides + 1);
-    var sizeOfFaces = 2 * sides;
-    var mesh = new SoftEngine.Mesh("Cylinder", sizeOfFaces);
-    var theta = 0; var i; var curX; var curY; var nextIndex;
-    var meshVertices = [];
-    meshVertices.push(new Vector3(0, 0, centerOf + height));
-    // mesh.Vertices[0] = new Vector3(0, 0, centerOf + height);
-    // Top Cap
-    for (i = 1;i < sides + 1; i += 1) {
-        curX = Number(Math.cos(theta).toFixed(2)) * radius;
-        curY = Number(Math.sin(theta).toFixed(2)) * radius;
-        meshVertices.push(new Vector3(curX, curY, centerOf + height));
-        // mesh.Vertices[i] = new Vector3(curX, curY, centerOf + height);
-        theta += stepTheta;
+    var stepTheta = 2 * Math.PI / n;
+    var mesh = new SoftEngine.Mesh("Cylinder");
+    var i; var curX; var curZ; var start; var end;
+    var meshVertices = new Array((4 * n) + 2);
+    var normalVectors = new Array((4 * n) + 2);
+    // Middle of top base vertices and its normals
+    meshVertices[0] = new Vector3(0, height, 0);
+    normalVectors[0] = new Vector3(0, 1, 0);
+    // Side of top base vertices and its normals
+    start = 1; end = n;
+    for (i = start; i <= end; i++) {
+        curX = radius * Number(Math.cos(stepTheta * (i-1)).toFixed(2));
+        curZ = radius * Number(Math.sin(stepTheta * (i-1)).toFixed(2));
+        normalVectors[i] = new Vector3(0, 1, 0);
+        meshVertices[i] = new Vector3(curX, height, curZ);
     }
-    for (i = 1; i <= sides; i += 1) {
-        nextIndex = (i + 1) % (sides + 1);
-        if (nextIndex == 0) nextIndex = 1;
-        mesh.Faces[i - 1] = { A:0, B:i, C:nextIndex };
+    // Middle of bottom base vertex and its normal
+    meshVertices[(4 * n) + 1] = new Vector3(0, 0, 0);
+    normalVectors[(4 * n) + 1] = new Vector3(0, -1, 0);
+    // Side of bottom base vertices and its normals
+    start = (3 * n) + 1; end = 4 * n;
+    for (i = start; i <= end; i ++) {
+        curX = radius * Number(Math.cos(stepTheta * (i-1)).toFixed(2));
+        curZ = radius * Number(Math.sin(stepTheta * (i-1)).toFixed(2));
+        normalVectors[i] = new Vector3(0, -1, 0);
+        meshVertices[i] = new Vector3(curX, 0, curZ);
     }
-    // Bottom Cap
-    height = centerOf;
-    theta = 0;
-    var lastIndex = 2 * sides + 1;
-    for (i = sides + 1; i < lastIndex; i += 1) {
-        curX = Number(Math.cos(theta).toFixed(2)) * radius;
-        curY = Number(Math.sin(theta).toFixed(2)) * radius;
-        meshVertices.push(new Vector3(curX, curY, height));
-        // mesh.Vertices[i] = new Vector3(curX, curY, height);
-        theta += stepTheta;
+    // Side surface vertices and its normals
+    start = n + 1; end = 2 * n; var P;
+    for (i = start; i <= end; i++) {
+        P = meshVertices[i - n];
+        meshVertices[i] = P;
+        normalVectors[i] = new Vector3(P.x / radius, 0, P.z / radius);
     }
-    // mesh.Vertices[lastIndex] = new Vector3(0, 0, height);
-    meshVertices.push(new Vector3(0, 0, height));
-    for (i = sides + 1; i < lastIndex; i += 1) {
-        nextIndex = (i + 1) % lastIndex;
-        if (nextIndex == 0) nextIndex = sides + 1;
-        mesh.Faces[i - 1] = { A:lastIndex, B:i, C:nextIndex };
+    // Side surface vertices and its normals
+    start = (2 * n) + 1; end = 3 * n;
+    for (i = start; i <= end; i++) {
+        P = meshVertices[i + n];
+        meshVertices[i] = P;
+        normalVectors[i] = new Vector3(P.x / radius, 0, P.z / radius);
     }
-    // Top to bottom faces
-    var j = sides + 1; var m = 0;
-    while (m < sides) {
-        nextIndex = (m + 1) % (sides + 1);
-        if (nextIndex === 0) nextIndex = 1;
-        nextNextIndex = (nextIndex + 1) % (sides + 1);
-        if (nextNextIndex === 0) nextNextIndex = 1;
-        mesh.Faces.push({
-            A: j,
-            B: nextIndex,
-            C: nextNextIndex
-        });
-        j += 1; m += 1;
+    var triangleFaces = new Array(4 * n);
+    // Top base triangles
+    start = 0; end = n - 1;
+    for (i = start; i <= end; i++) {
+        var vertexB = (i + 2) % (n + 1) === 0 ? 1 : (i + 2);
+        triangleFaces[i] = { A: 0, B: vertexB, C: i + 1 };
     }
-    // Bottom to top faces
-    m = sides + 1;
-    j = 2;
-    while (m < lastIndex) {
-        nextIndex = (m + 1) % (lastIndex);
-        if (nextIndex === 0) nextIndex = 1;
-        mesh.Faces.push({
-            A: j,
-            B: m,
-            C: nextIndex
-        });
-        j += 1; m += 1;
+    // Bottom base triangles
+    start = 3 * n; end = (4 * n) - 2;
+    for (i = start; i <= end; i++) {
+        triangleFaces[i] = { A: (4 * n) + 1, B: i + 1, C: i + 2 };
     }
-    var vertexNormals = {}; var A; var B; var C; var faceNormals = [];
-    var vertexToFacesMap = {};
-    for (var i = 0; i < meshVertices.length; i++) {
-        vertexToFacesMap[i] = [];
-    };
-    mesh.Faces.forEach((face, index) => {
-        A = meshVertices[face.A]; B = meshVertices[face.B]; C = meshVertices[face.C];
-        vertexToFacesMap[face.A].push(index); vertexToFacesMap[face.B].push(index); vertexToFacesMap[face.C].push(index);
-        faceNormals[index] = Vector3.Cross(B.subtract(A), C.subtract(A));
-    });
-    Object.entries(vertexToFacesMap).forEach((value, key) => {
-        var currentFaces = value[1];
-        var sumOfVertexFaces;
-        currentFaces.forEach((face) => {
-            if (!sumOfVertexFaces) {
-                sumOfVertexFaces = faceNormals[face];
-            } else {
-                sumOfVertexFaces = sumOfVertexFaces.add(faceNormals[face]);
-            }
-        })
-        // sumOfVertexFaces.normalize();
-        vertexNormals[key] = sumOfVertexFaces;
-    })
+    triangleFaces[(4 * n) - 1] = { A: (4 * n) + 1, B: (4 * n), C: (3 * n) + 1 };
+    // Side surface triangles (four cases ...)
+    start = n; end = (2 * n) - 2;
+    for (i = start; i <= end; i++) {
+        triangleFaces[i] = { A: i + 1, B: i + 2, C: i + 1 + n };
+    }
+    triangleFaces[(2 * n) - 1] = { A: 2 * n, B: n + 1, C: 3 * n}
+    start = 2 * n; end = (3 * n) - 2;
+    for (i = start; i <= end; i++) {
+        triangleFaces[i] = { A: i + 1, B: i + 2 - n, C: i + 2 };
+    }
+    triangleFaces[(3 * n) - 1] = { A: 3 * n, B: n + 1, C: (2 * n) + 1}
+    mesh.Faces = triangleFaces;
     mesh.Vertices = meshVertices.map((element, index) => {
-        var x = element.x; var y = element.y; var z = element.z;
-        var vertexNormal = vertexNormals[index];
-        var nx = vertexNormal.x; var ny = vertexNormal.y; var nz = vertexNormal.z;
         return {
-            Coordinates: new Vector3(x, y, z),
-            Normal: new Vector3(nx, ny, nz),
-            WorldCoordinates: null
+            Coordinates: meshVertices[index],
+            Normal: normalVectors[index],
         }
     })
-    console.log(mesh.Vertices)
-    mesh.Rotation.x = -1;
-    // mesh.Vertices = meshVertices;
     return mesh;
 }
 
 function init() {
     canvas = document.getElementById("cnv");
-    mera = new SoftEngine.Camera();
+    camera = new SoftEngine.Camera();
     device = new SoftEngine.Device(canvas);
     canvasMesh = getCylinderMesh();
-    meshes.push(canvasMesh);
-    mera.Position = new Vector3(0, 0, 15);
-    mera.Target = new Vector3(0, 0, 0);
+    camera.Position = new Vector3(0, 0, 20);
+    camera.Target = new Vector3(0, 0, 0);
     requestAnimationFrame(drawingLoop);
 }
 
 function drawingLoop() {
     if (canvasMesh) {
         device.clear();
-        // canvasMesh.Rotation.x += 0.001;
-        // canvasMesh.Rotation.y += 0.01;
-        if (checkBox.checked) canvasMesh.Rotation.z += 0.05; else canvasMesh.Rotation.z = canvasMesh.Rotation.z;
-        device.render(mera, meshes);
+        if (checkBox.checked) {
+            canvasMesh.Rotation.x += 0.005;
+            canvasMesh.Rotation.z += 0.005;
+        }
+        device.render(camera, canvasMesh);
         device.present();
         requestAnimationFrame(drawingLoop);
     }
@@ -868,7 +687,6 @@ function resetMesh() {
     canvasMesh = null;
     device.clear();
     canvasMesh = getCylinderMesh();
-    meshes.pop(); meshes.push(canvasMesh);
     requestAnimationFrame(drawingLoop);
 }
 
@@ -876,20 +694,20 @@ function handleMouse(event) {
     if (mouseClicked) {
         differenceX = (mouseX - event.clientX) / 5000;
         differenceY = (mouseY - event.clientY) / 5000;
-        if (differenceX) canvasMesh.Rotation.y += differenceX;
-        if (differenceY) canvasMesh.Rotation.x += differenceY;
+        if (differenceX) canvasMesh.Rotation.x += differenceX;
+        if (differenceY) canvasMesh.Rotation.z += differenceY;
     }
 }
 
 function stopMouse(event) { mouseClicked = false; }
 
-function wheelStart(event) {  mera.Position.z += event.deltaY / 100; }
+function wheelStart(event) {  camera.Position.z += event.deltaY / 100; }
 
 function handleKeyboard(event) {
-    if (event.code === "KeyW") mera.Target.y -= 0.1;
-    if (event.code === "KeyS") mera.Target.y += 0.1;
-    if (event.code === "KeyA") mera.Target.x -= 0.1;
-    if (event.code === "KeyD") mera.Target.x += 0.1;
+    if (event.code === "KeyW") camera.Target.y -= 0.1;
+    if (event.code === "KeyS") camera.Target.y += 0.1;
+    if (event.code === "KeyA") camera.Target.x -= 0.1;
+    if (event.code === "KeyD") camera.Target.x += 0.1;
 }
 
 document.addEventListener("mousedown", startMouse, false);
