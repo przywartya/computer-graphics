@@ -8,8 +8,9 @@ body {
 }
 
 canvas {
-    width: 480px;
-    height: 220px;
+    margin: 30px;
+    width: 700px;
+    height: 350px;
 }
 
 p {
