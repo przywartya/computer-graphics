@@ -546,6 +546,7 @@ var SoftEngine;
                 var posY = cMesh.Position.y, posX =  cMesh.Position.x, posZ = cMesh.Position.z;
                 // WORLD
                 var worldMatrix = Matrix.RotationYawPitchRoll(rotY, rotX, rotZ).multiply(Matrix.Translation(posX, posY, posZ));
+                this.worldMatrix = worldMatrix;
                 // VIEW
                 var worldView = worldMatrix.multiply(viewMatrix);
                 // PROJECTION - transformMatrix = WorldViewProjectionMatrix
@@ -572,7 +573,7 @@ var SoftEngine;
                             var color = 0.25 + ((indexFaces % cMesh.Faces.length) / cMesh.Faces.length) * 0.75;
                             this.drawTriangle(pixelA, pixelB, pixelC, new Color4(color, 0, color, 1 ));
                         } else if (drawType === "SHADE") {
-                            this.drawTriangle(pixelA, pixelB, pixelC, new Color4(255, 0, 255, 1 ));
+                            this.drawTriangle(pixelA, pixelB, pixelC, new Color4(60, 80, 20, 1 ), camera.Position);
                         }
                     }
                 }
@@ -597,61 +598,68 @@ var SoftEngine;
                 if(e2 < dx) { err += dx; y0 += sy; }
             }
         };
-        // Compute the cosine of the angle between the light vector and the normal vector
-        // Returns a value between 0 and 1
         Device.prototype.computeNDotL = function (vertex, normal, lightPosition) {
             var lightDirection = lightPosition.subtract(vertex);
             normal.normalize();
             lightDirection.normalize();
             return Math.max(0, Vector3.Dot(normal, lightDirection));
         };
-        Device.prototype.computeSpecularReflection = function (vertex, normal, lightPosition) {
-            var lightDirection = lightPosition.subtract(vertex); // l
+        Device.prototype.computeSpecularReflection = function (vertex, normal, lightPosition, cameraPos) {
+            var m = 25;
+            var Ks = new Vector3(0.5, 0.5, 0.5);
+            var Il = new Vector3(0.1, 0.1, 0.1);
+            // var lightDir3d = Vector3.TransformCoordinates(lightPosition, this.worldMatrix);
+            var lightDirection = lightPosition.subtract(vertex);
+            var v = cameraPos.subtract(vertex);
+            v.normalize();
             normal.normalize();
             lightDirection.normalize();
             var ndotl = Math.max(0, Vector3.Dot(normal, lightDirection));
             var r = normal.scale(2 * ndotl).subtract(lightDirection);
+            var rdotv = Math.max(0, Math.pow(Vector3.Dot(r, v), m));
+            return Ks.multiply(Il).scale(rdotv);
+            // specular is Ks * Il * (r dot v) ^ m
             // v is a unit vector in the direction of the observer
             // var rdotv
             // pozycja kamery ma byc w ukladzie swiata 
             // pozniej odejmuje pozycje kamery od pozycji punktu
-            return Math.max(0, Vector3.Dot(normal, lightDirection));
+            // return Math.max(0, Vector3.Dot(normal, lightDirection));
         };
         
-        Device.prototype.processScanLine = function (data, va, vb, vc, vd, color) {
-            var pa = va.Coordinates;
-            var pb = vb.Coordinates;
-            var pc = vc.Coordinates;
-            var pd = vd.Coordinates;
+        Device.prototype.processScanLine = function (data, va, vb, vc, vd, color, cameraPos, lightPos) {
+            var Ia = new Vector3(0.0005, 0.0005, 0.0005); // AMBIENT REFLECTION
+            var Kd = new Vector3(0.1, 0.1, 0.1);
+            var lightIntesity = new Vector3(0.1, 0.1, 0.1);
+            var pa = va.Coordinates; var pb = vb.Coordinates;
+            var pc = vc.Coordinates; var pd = vd.Coordinates;
             var gradient1 = pa.y != pb.y ? (data.currentY - pa.y) / (pb.y - pa.y) : 1;
             var gradient2 = pc.y != pd.y ? (data.currentY - pc.y) / (pd.y - pc.y) : 1;
-            var sx = this.interpolate(pa.x, pb.x, gradient1) >> 0;
-            var ex = this.interpolate(pc.x, pd.x, gradient2) >> 0;
-            var z1 = this.interpolate(pa.z, pb.z, gradient1);
-            var z2 = this.interpolate(pc.z, pd.z, gradient2);
+            var sx = this.interpolate(pa.x, pb.x, gradient1) >> 0; var ex = this.interpolate(pc.x, pd.x, gradient2) >> 0;
+            var z1 = this.interpolate(pa.z, pb.z, gradient1); var z2 = this.interpolate(pc.z, pd.z, gradient2);
             var snl = this.interpolate(data.ndotla, data.ndotlb, gradient1);
-            var enl = this.interpolate(data.ndotlc, data.ndotld, gradient2);        
+            var enl = this.interpolate(data.ndotlc, data.ndotld, gradient2);
             for (var x = sx; x < ex; x++) {
                 var gradient = (x - sx) / (ex - sx);
+                var v1Normal = va.Normal.scale(1 - gradient1).add(vb.Normal.scale(gradient1));
+                var v2Normal = vc.Normal.scale(1 - gradient2).add(vd.Normal.scale(gradient2));
+                var v3Normal = v1Normal.scale(1 - gradient).add(v2Normal.scale(gradient)); // normal vector at current point
                 var z = this.interpolate(z1, z2, gradient);
                 var ndotl = this.interpolate(snl, enl, gradient);
-                var Ia = new Vector3(0, 0, 0);
-                var Kd = new Vector3(0.1, 0.1, 0.1);
-                var lightIntesity = new Vector3(0.1, 0.1, 0.1);
                 var Id = Kd.multiply(lightIntesity).scale(ndotl);
-                var phong = Ia.add(Id);
-                debugger
+                var currentPoint = new Vector3(x, data.currentY, z);
+                var Is = this.computeSpecularReflection(currentPoint, v3Normal, lightPos, cameraPos);
+                var phong = Ia.add(Id).add(Is);
                 var phongColor = new Color4(color.r * phong.x, color.g * phong.y, color.b * phong.z, 1);
                 this.drawPoint(new Vector3(x, data.currentY, z), phongColor);
             }
         };
-        Device.prototype.drawTriangle = function (v1, v2, v3, color) {
+        Device.prototype.drawTriangle = function (v1, v2, v3, color, cameraPos) {
             if (v1.Coordinates.y > v2.Coordinates.y) { var temp = v2; v2 = v1; v1 = temp; }
             if (v2.Coordinates.y > v3.Coordinates.y) { var temp = v2; v2 = v3; v3 = temp; }
             if (v1.Coordinates.y > v2.Coordinates.y) { var temp = v2; v2 = v1; v1 = temp; }
             var p1 = v1.Coordinates; var p2 = v2.Coordinates; var p3 = v3.Coordinates;
             var data = {}; var dP1P2; var dP1P3;
-            var lightPos = new Vector3(-5, 0, 10);
+            var lightPos = new Vector3(0, 100, 250);
             // Dwie wlasciwosci zrodla swiatla: Pozycja lightPos i kolor Il (light intensity)
             // Phong equation: I = Ia + Id + Is
             // Ia = Ka (uniform constant value)
@@ -675,13 +683,13 @@ var SoftEngine;
                         data.ndotlb = nl3;
                         data.ndotlc = nl1;
                         data.ndotld = nl2;
-                        this.processScanLine(data, v1, v3, v1, v2, color);
+                        this.processScanLine(data, v1, v3, v1, v2, color, cameraPos, lightPos);
                     } else {
                         data.ndotla = nl1;
                         data.ndotlb = nl3;
                         data.ndotlc = nl2;
                         data.ndotld = nl3;
-                        this.processScanLine(data, v1, v3, v2, v3, color);
+                        this.processScanLine(data, v1, v3, v2, v3, color, cameraPos, lightPos);
                     }
                 }
             } else {
@@ -692,13 +700,13 @@ var SoftEngine;
                         data.ndotlb = nl2;
                         data.ndotlc = nl1;
                         data.ndotld = nl3;
-                        this.processScanLine(data, v1, v2, v1, v3, color);
+                        this.processScanLine(data, v1, v2, v1, v3, color, cameraPos, lightPos);
                     } else {
                         data.ndotla = nl2;
                         data.ndotlb = nl3;
                         data.ndotlc = nl1;
                         data.ndotld = nl3;
-                        this.processScanLine(data, v2, v3, v1, v3, color);
+                        this.processScanLine(data, v2, v3, v1, v3, color, cameraPos, lightPos);
                     }
                 }
             }
@@ -817,8 +825,8 @@ function drawingLoop() {
     if (canvasMesh) {
         device.clear();
         if (checkBox.checked) {
-            canvasMesh.Rotation.x += 0.001;
-            canvasMesh.Rotation.z += 0.001;
+            canvasMesh.Rotation.x += 0.007;
+            canvasMesh.Rotation.z += 0.007;
         }
         device.render(mera, meshes);
         device.present();
