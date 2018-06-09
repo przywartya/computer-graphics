@@ -1,3 +1,12 @@
+var Color4 = (function () {
+    function Color4(initialR, initialG, initialB, initialA) {
+        this.r = initialR;
+        this.g = initialG;
+        this.b = initialB;
+        this.a = initialA;
+    }
+    return Color4;
+})();
 var Matrix = (function () {
     function Matrix() {
         this.m = [];
@@ -24,112 +33,111 @@ var Matrix = (function () {
     };
     Matrix.FromValues = function FromValues(initialM11, initialM12, initialM13, initialM14, initialM21, initialM22, initialM23, initialM24, initialM31, initialM32, initialM33, initialM34, initialM41, initialM42, initialM43, initialM44) {
         var result = new Matrix();
-        result.m[0] = initialM11;
-        result.m[1] = initialM12;
-        result.m[2] = initialM13;
-        result.m[3] = initialM14;
-        result.m[4] = initialM21;
-        result.m[5] = initialM22;
-        result.m[6] = initialM23;
-        result.m[7] = initialM24;
-        result.m[8] = initialM31;
-        result.m[9] = initialM32;
-        result.m[10] = initialM33;
-        result.m[11] = initialM34;
-        result.m[12] = initialM41;
-        result.m[13] = initialM42;
-        result.m[14] = initialM43;
-        result.m[15] = initialM44;
+        result.m[0] = initialM11; result.m[1] = initialM12; result.m[2] = initialM13; result.m[3] = initialM14; 
+        result.m[4] = initialM21; result.m[5] = initialM22; result.m[6] = initialM23; result.m[7] = initialM24; 
+        result.m[8] = initialM31; result.m[9] = initialM32; result.m[10] = initialM33; result.m[11] = initialM34;
+        result.m[12] = initialM41; result.m[13] = initialM42; result.m[14] = initialM43; result.m[15] = initialM44;
         return result;
     };
     Matrix.Identity = function Identity() {
-        return Matrix.FromValues(1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0);
+        return Matrix.FromValues(
+            1.0, 0, 0, 0, 
+            0, 1.0, 0, 0,
+            0, 0, 1.0, 0,
+            0, 0, 0, 1.0
+        );
     };
     Matrix.Zero = function Zero() {
-        return Matrix.FromValues(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        return Matrix.FromValues(
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0
+        );
     };
     Matrix.RotationX = function RotationX(angle) {
         var result = Matrix.Zero();
         var s = Math.sin(angle);
         var c = Math.cos(angle);
+        // 1  0  0  0
+        // 0  c -s  0
+        // 0  s  c  0
+        // 0  0  0  1
         result.m[0] = 1.0;
+        result.m[5] = c; result.m[6] = -s;
+        result.m[9] = s; result.m[10] = c;
         result.m[15] = 1.0;
-        result.m[5] = c;
-        result.m[10] = c;
-        result.m[9] = -s;
-        result.m[6] = s;
         return result;
     };
     Matrix.RotationY = function RotationY(angle) {
         var result = Matrix.Zero();
         var s = Math.sin(angle);
         var c = Math.cos(angle);
+        // c  0  s  0
+        // 0  1  0  0
+        //-s  0  c  0
+        // 0  0  0  1
         result.m[5] = 1.0;
+        result.m[0] = c; result.m[2] = s;
+        result.m[8] = -s; result.m[10] = c;
         result.m[15] = 1.0;
-        result.m[0] = c;
-        result.m[2] = -s;
-        result.m[8] = s;
-        result.m[10] = c;
         return result;
     };
     Matrix.RotationZ = function RotationZ(angle) {
         var result = Matrix.Zero();
         var s = Math.sin(angle);
         var c = Math.cos(angle);
+        // c -s  0  0
+        // s  c  0  0
+        // 0  0  1  0
+        // 0  0  0  1
+        result.m[0] = c; result.m[1] = -s;
+        result.m[4] = s; result.m[5] = c;
         result.m[10] = 1.0;
         result.m[15] = 1.0;
-        result.m[0] = c;
-        result.m[1] = s;
-        result.m[4] = -s;
-        result.m[5] = c;
         return result;
     };
-    Matrix.RotationYawPitchRoll = function RotationYawPitchRoll(yaw, pitch, roll) {
-        return Matrix.RotationZ(roll).multiply(Matrix.RotationX(pitch)).multiply(Matrix.RotationY(yaw));
+    Matrix.Rotation = function Rotation(y, x, z) {
+        return Matrix.RotationZ(z).multiply(Matrix.RotationX(x)).multiply(Matrix.RotationY(y));
     };
     Matrix.Translation = function Translation(x, y, z) {
+        // 1 0 0 x
+        // 0 1 0 y
+        // 0 0 1 z
+        // 0 0 0 1
         var result = Matrix.Identity();
         result.m[12] = x;
         result.m[13] = y;
         result.m[14] = z;
         return result;
     };
-    Matrix.LookAtLH = function LookAtLH(eye, target, up) {
-        var zAxis = target.subtract(eye);
-        zAxis.normalize();
-        var xAxis = Vector3.Cross(up, zAxis);
-        xAxis.normalize();
-        var yAxis = Vector3.Cross(zAxis, xAxis);
-        yAxis.normalize();
-        var ex = -Vector3.Dot(xAxis, eye);
-        var ey = -Vector3.Dot(yAxis, eye);
-        var ez = -Vector3.Dot(zAxis, eye);
-        return Matrix.FromValues(xAxis.x, yAxis.x, zAxis.x, 0, xAxis.y, yAxis.y, zAxis.y, 0, xAxis.z, yAxis.z, zAxis.z, 0, ex, ey, ez, 1);
+    Matrix.Camera = function Camera(cPos, cTarget, cUp) {
+        // cZ = (cPos - cTarget) / ||cPos - cTarget|| 
+        // cX = (cUp x cZ) / ||cUp x cZ|| 
+        // cY = (cZ x cX) / ||cZ x cX|| 
+        var cZ = cTarget.subtract(cPos); cZ.normalize();
+        var cX = Vector3.Cross(cUp, cZ); cX.normalize();
+        var cY = Vector3.Cross(cZ, cX);  cY.normalize();
+        var ex = Vector3.Dot(cX, cPos);
+        var ey = Vector3.Dot(cY, cPos);
+        var ez = Vector3.Dot(cZ, cPos);
+        return Matrix.FromValues(cX.x, cY.x, cZ.x, 0, cX.y, cY.y, cZ.y, 0, cX.z, cY.z, cZ.z, 0, -ex, -ey, -ez, 1);
     };
-    Matrix.PerspectiveFovLH = function PerspectiveFovLH(fov, aspect, znear, zfar) {
+    Matrix.Projection = function Projection(aspect, zn, zf, Vw, Vh) {
+        // w 0   0  0
+        // 0 h   0  0
+        // 0 0   Q  1
+        // 0 0 -QZn 0
+        // Q = Zf / (Zf - Zn)
         var matrix = Matrix.Zero();
-        var tan = 1.0 / (Math.tan(fov * 0.5));
-        matrix.m[0] = tan / aspect;
-        matrix.m[1] = matrix.m[2] = matrix.m[3] = 0.0;
-        matrix.m[5] = tan;
-        matrix.m[4] = matrix.m[6] = matrix.m[7] = 0.0;
-        matrix.m[8] = matrix.m[9] = 0.0;
-        matrix.m[10] = -zfar / (znear - zfar);
-        matrix.m[11] = 1.0;
-        matrix.m[12] = matrix.m[13] = matrix.m[15] = 0.0;
-        matrix.m[14] = (znear * zfar) / (znear - zfar);
+        var ctan = 1.0 / (Math.tan(0.5));
+        matrix.m[0] = ctan/aspect;matrix.m[1]=  0.0; matrix.m[2]  =     0.0;          matrix.m[3] =  0.0;
+        matrix.m[4] =  0.0;      matrix.m[5] =  ctan; matrix.m[6] =     0.0;          matrix.m[7] =  0.0;
+        matrix.m[8] =  0.0;      matrix.m[9] =  0.0; matrix.m[10] = zf/(zf-zn);       matrix.m[11] = 1.0;
+        matrix.m[12] = 0.0;      matrix.m[13] = 0.0; matrix.m[14] = (-zn*zf)/(zf-zn); matrix.m[15] = 0.0;
         return matrix;
     };
     return Matrix;
-})();
-var Color4 = (function () {
-    function Color4(initialR, initialG, initialB, initialA) {
-        this.r = initialR;
-        this.g = initialG;
-        this.b = initialB;
-        this.a = initialA;
-    }
-    return Color4;
 })();
 var Vector3 = (function () {
     function Vector3(initialX, initialY, initialZ) {
@@ -137,21 +145,12 @@ var Vector3 = (function () {
         this.y = initialY;
         this.z = initialZ;
     }
-    Vector3.prototype.toString = function () {
-        return "{X: " + this.x + " Y:" + this.y + " Z:" + this.z + "}";
-    };
-    Vector3.prototype.add = function (otherVector) {
-        return new Vector3(this.x + otherVector.x, this.y + otherVector.y, this.z + otherVector.z);
-    };
-    Vector3.prototype.subtract = function (otherVector) {
-        return new Vector3(this.x - otherVector.x, this.y - otherVector.y, this.z - otherVector.z);
-    };
-    Vector3.prototype.scale = function (scale) {
-        return new Vector3(this.x * scale, this.y * scale, this.z * scale);
-    };
-    Vector3.prototype.multiply = function (otherVector) {
-        return new Vector3(this.x * otherVector.x, this.y * otherVector.y, this.z * otherVector.z);
-    };
+    Vector3.prototype.toString = function () { return "{X: " + this.x + " Y:" + this.y + " Z:" + this.z + "}" };
+    Vector3.prototype.add = function (otherVector) { return new Vector3(this.x + otherVector.x, this.y + otherVector.y, this.z + otherVector.z) };
+    Vector3.prototype.subtract = function (otherVector) { return new Vector3(this.x - otherVector.x, this.y - otherVector.y, this.z - otherVector.z) };
+    Vector3.prototype.scale = function (scale) { return new Vector3(this.x * scale, this.y * scale, this.z * scale) };
+    Vector3.prototype.multiply = function (otherVector) { return new Vector3(this.x * otherVector.x, this.y * otherVector.y, this.z * otherVector.z) };
+    Vector3.Dot = function Dot(left, right) { return (left.x * right.x + left.y * right.y + left.z * right.z) };
     Vector3.prototype.normalize = function () {
         var len = Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z)
         if(len === 0) return;
@@ -159,9 +158,6 @@ var Vector3 = (function () {
         this.x *= num;
         this.y *= num;
         this.z *= num;
-    };
-    Vector3.Dot = function Dot(left, right) {
-        return (left.x * right.x + left.y * right.y + left.z * right.z);
     };
     Vector3.Cross = function Cross(left, right) {
         var x = left.y * right.z - left.z * right.y;
@@ -174,6 +170,28 @@ var Vector3 = (function () {
         var y = (vector.x * transformation.m[1]) + (vector.y * transformation.m[5]) + (vector.z * transformation.m[9]) + transformation.m[13];
         var z = (vector.x * transformation.m[2]) + (vector.y * transformation.m[6]) + (vector.z * transformation.m[10]) + transformation.m[14];
         var w = (vector.x * transformation.m[3]) + (vector.y * transformation.m[7]) + (vector.z * transformation.m[11]) + transformation.m[15];
+        return new Vector3(x / w, y / w, z / w);
+    };
+    Vector3.TransformNormal = function (vector, transformation) {
+        var x = (vector.x * transformation.m[0]) + (vector.y * transformation.m[4]) + (vector.z * transformation.m[8]);
+        var y = (vector.x * transformation.m[1]) + (vector.y * transformation.m[5]) + (vector.z * transformation.m[9]);
+        var z = (vector.x * transformation.m[2]) + (vector.y * transformation.m[6]) + (vector.z * transformation.m[10]);
+        return new Vector3(x, y, z);
+    };
+    Vector3.TransformPoint = function TransformCoordinates(p, P) {
+        // Mat * point
+        //                 x
+        //                 y
+        //                 z
+        //                 1
+        // 0  1  2  3
+        // 4  5  6  7
+        // 8  9  10 11
+        // 12 13 14 15
+        var x = (p.x * P.m[0]) + (p.y * P.m[1]) + (p.z * P.m[2]) + P.m[3];
+        var y = (p.x * P.m[4]) + (p.y * P.m[5]) + (p.z * P.m[6]) + P.m[7];
+        var z = (p.x * P.m[8]) + (p.y * P.m[9]) + (p.z * P.m[10]) + P.m[11];
+        var w = (p.x * P.m[12]) + (p.y * P.m[13]) + (p.z * P.m[14]) + P.m[15];
         return new Vector3(x / w, y / w, z / w);
     };
     return Vector3;
@@ -207,7 +225,7 @@ var SoftEngine;
             this.workingWidth = canvas.width;
             this.workingHeight = canvas.height;
             this.workingContext = this.workingCanvas.getContext("2d");
-            this.lightPosition = new Vector3(0, 100, 250);
+            this.lightPosition = new Vector3(0, 0, 200);
             this.color = new Color4(180, 80, 20, 1 );
             this.lightIntensity = new Vector3(0.2, 0.2, 0.2);
         }
@@ -217,17 +235,24 @@ var SoftEngine;
             this.backbuffer = this.workingContext.getImageData(0, 0, this.workingWidth, this.workingHeight);
         };
 
-        Device.prototype.present = function () { this.workingContext.putImageData(this.backbuffer, 0, 0) };
+        Device.prototype.present = function () { 
+            this.workingContext.putImageData(this.backbuffer, 0, 0);
+        };
 
-        Device.prototype.interpolate = function (min, max, gradient) { return min + (max - min) * Math.max(0, Math.min(gradient, 1)) };
+        Device.prototype.interpolate = function (min, max, gradient) { 
+            // Interpolating the value between 2 vertices 
+            // min is the starting point, max the ending point
+            // and gradient the % between the 2 points
+            return min + (max - min) * Math.max(0, Math.min(gradient, 1));
+        };
 
         Device.prototype.putPixel = function (x, y, z, color) {
             this.backbufferdata = this.backbuffer.data;
             var index = ((x >> 0) + (y >> 0) * this.workingWidth) * 4;
             this.backbufferdata[index] = color.r * 255;
-            this.backbufferdata[index + 1] = color.g * 255;
-            this.backbufferdata[index + 2] = color.b * 255;
-            this.backbufferdata[index + 3] = color.a * 255;
+            this.backbufferdata[index+1] = color.g * 255;
+            this.backbufferdata[index+2] = color.b * 255;
+            this.backbufferdata[index+3] = color.a * 255;
         };
 
         Device.prototype.drawPoint = function (point, color) {
@@ -239,7 +264,7 @@ var SoftEngine;
         Device.prototype.project = function (vertex, transMat, world) {
             var point2d = Vector3.TransformCoordinates(vertex.Coordinates, transMat);
             var point3DWorld = Vector3.TransformCoordinates(vertex.Coordinates, world);
-            var normal3DWorld = Vector3.TransformCoordinates(vertex.Normal, world);
+            var normal3DWorld = Vector3.TransformNormal(vertex.Normal, world);
             var x = point2d.x * this.workingWidth + this.workingWidth / 2.0;
             var y = -point2d.y * this.workingHeight + this.workingHeight / 2.0;
             return ({
@@ -251,11 +276,11 @@ var SoftEngine;
 
         Device.prototype.render = function (camera, mesh) {
             this.cameraPosition = camera.Position;
-            var viewMatrix = Matrix.LookAtLH(camera.Position, camera.Target, new Vector3(0, 1.0, 0));
-            var projectionMatrix = Matrix.PerspectiveFovLH(0.78, this.workingWidth / this.workingHeight, 0.01, 1.0);
             var rot = mesh.Rotation; 
             var pos = mesh.Position;
-            var worldMatrix = Matrix.RotationYawPitchRoll(rot.y, rot.x, rot.z).multiply(Matrix.Translation(pos.x, pos.y, pos.z));
+            var worldMatrix = Matrix.Rotation(rot.y, rot.x, rot.z).multiply(Matrix.Translation(pos.x, pos.y, pos.z));
+            var viewMatrix = Matrix.Camera(camera.Position, camera.Target, new Vector3(0, 1.0, 0));
+            var projectionMatrix = Matrix.Projection(this.workingWidth / this.workingHeight, 0.01, 1.0);
             var transformMatrix =  worldMatrix.multiply(viewMatrix).multiply(projectionMatrix);
             mesh.Faces.forEach((face) => {
                 var vertexA = mesh.Vertices[face.A]; var vertexB = mesh.Vertices[face.B]; var vertexC = mesh.Vertices[face.C];
@@ -295,6 +320,7 @@ var SoftEngine;
         };
 
         Device.prototype.drawTriangle = function (v1, v2, v3) {
+            // Sort vertices based on Y value
             if (v1.Coordinates.y > v2.Coordinates.y) { var temp = v2; v2 = v1; v1 = temp; }
             if (v2.Coordinates.y > v3.Coordinates.y) { var temp = v2; v2 = v3; v3 = temp; }
             if (v1.Coordinates.y > v2.Coordinates.y) { var temp = v2; v2 = v1; v1 = temp; }
@@ -312,43 +338,44 @@ var SoftEngine;
 
         Device.prototype.processScanLine = function (currentY, va, vb, vc, vd) {
             // Phong equation: I = Ia + Id + Is
-            // Ia = Ka (uniform constant value)
-            // Id = Kd * I * (n dotprod l)
-            // Is = Ks * I * (r dotprod v)^m
-            var Ia = new Vector3(0.001, 0.001, 0.001); // AMBIENT REFLECTION
+            // Ia = Ka (uniform constant value) AMBIENT
+            // Id = Kd * I * (n dotprod l)      DIFFUSION 
+            // Is = Ks * I * (r dotprod v)^m    SPECULAR
+            var Ia = new Vector3(0.001, 0.001, 0.001);
             var pa = va.Coordinates; var pb = vb.Coordinates; var pc = vc.Coordinates; var pd = vd.Coordinates;
             var gradient1 = pa.y != pb.y ? (currentY - pa.y) / (pb.y - pa.y) : 1;
             var gradient2 = pc.y != pd.y ? (currentY - pc.y) / (pd.y - pc.y) : 1;
-            var sx = this.interpolate(pa.x, pb.x, gradient1) >> 0; var ex = this.interpolate(pc.x, pd.x, gradient2) >> 0;
-            var z1 = this.interpolate(pa.z, pb.z, gradient1); var z2 = this.interpolate(pc.z, pd.z, gradient2);
+            var sx = this.interpolate(pa.x, pb.x, gradient1) >> 0; 
+            var ex = this.interpolate(pc.x, pd.x, gradient2) >> 0;
+            var z1 = this.interpolate(pa.z, pb.z, gradient1); 
+            var z2 = this.interpolate(pc.z, pd.z, gradient2);
             var v1Normal = va.Normal.scale(1 - gradient1).add(vb.Normal.scale(gradient1));
             var v2Normal = vc.Normal.scale(1 - gradient2).add(vd.Normal.scale(gradient2));
             for (var x = sx; x < ex; x++) {
                 var gradient = (x - sx) / (ex - sx);
-                var v3Normal = v1Normal.scale(1 - gradient).add(v2Normal.scale(gradient));
                 var z = this.interpolate(z1, z2, gradient);
                 var currentPoint = new Vector3(x, currentY, z);
-                var Id = this.computeDiffusionReflection(currentPoint, v3Normal);
-                var Is = this.computeSpecularReflection(currentPoint, v3Normal);
+                var v3Normal = v1Normal.scale(1 - gradient).add(v2Normal.scale(gradient));
+                var lightDirection = this.getLightDirection(currentPoint);
+                var Id = this.computeDiffusionReflection(v3Normal, lightDirection);
+                var Is = this.computeSpecularReflection(currentPoint, v3Normal, lightDirection);
                 var phong = Ia.add(Id).add(Is);
                 this.drawPoint(currentPoint, new Color4(this.color.r * phong.x, this.color.g * phong.y, this.color.b * phong.z, 1));
             }
         };
 
-        Device.prototype.computeSpecularReflection = function (vertex, normal) {
+        Device.prototype.computeSpecularReflection = function (vertex, normal, lightDirection) {
             var Ks = new Vector3(0.5, 0.5, 0.5);
-            var lightDirection = this.getLightDirection(vertex);
             var v = this.cameraPosition.subtract(vertex);
             v.normalize();
             var ndotl = Math.max(0, Vector3.Dot(normal, lightDirection));
             var r = normal.scale(2 * ndotl).subtract(lightDirection);
-            var rdotv = Math.max(0, Math.pow(Vector3.Dot(r, v), 150));
+            var rdotv = Math.max(0, Math.pow(Vector3.Dot(r, v), 200));
             return Ks.multiply(this.lightIntensity).scale(rdotv);
         };
 
-        Device.prototype.computeDiffusionReflection = function (vertex, normal) {
+        Device.prototype.computeDiffusionReflection = function (normal, lightDirection) {
             var Kd = new Vector3(0.1, 0.1, 0.1);
-            var lightDirection = this.getLightDirection(vertex);
             var ndotl = Math.max(0, Vector3.Dot(normal, lightDirection));
             return Kd.multiply(this.lightIntensity).scale(ndotl);
         };
@@ -503,10 +530,10 @@ function stopMouse(event) { mouseClicked = false; }
 function wheelStart(event) {  camera.Position.z += event.deltaY / 100; }
 
 function handleKeyboard(event) {
-    if (event.code === "KeyW") camera.Target.y -= 0.1;
-    if (event.code === "KeyS") camera.Target.y += 0.1;
-    if (event.code === "KeyA") camera.Target.x -= 0.1;
-    if (event.code === "KeyD") camera.Target.x += 0.1;
+    if (event.code === "ArrowUp") camera.Target.y -= 0.5;
+    if (event.code === "ArrowDown") camera.Target.y += 0.5;
+    if (event.code === "ArrowLeft") camera.Target.x -= 0.5;
+    if (event.code === "ArrowRight") camera.Target.x += 0.5;
 }
 
 document.addEventListener("mousedown", startMouse, false);
