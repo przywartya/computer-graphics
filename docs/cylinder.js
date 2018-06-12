@@ -112,6 +112,10 @@ var Matrix = (function () {
         return result;
     };
     Matrix.Camera = function Camera(cPos, cTarget, cUp) {
+        // CX.x CX.y CX.z ex
+        // CY.x CY.y CY.z ey
+        // CZ.x CZ.y CZ.z ez
+        //  0    0    0   1
         // cZ = (cPos - cTarget) / ||cPos - cTarget|| 
         // cX = (cUp x cZ) / ||cUp x cZ|| 
         // cY = (cZ x cX) / ||cZ x cX|| 
@@ -177,22 +181,6 @@ var Vector3 = (function () {
         var y = (vector.x * transformation.m[1]) + (vector.y * transformation.m[5]) + (vector.z * transformation.m[9]);
         var z = (vector.x * transformation.m[2]) + (vector.y * transformation.m[6]) + (vector.z * transformation.m[10]);
         return new Vector3(x, y, z);
-    };
-    Vector3.TransformPoint = function TransformCoordinates(p, P) {
-        // Mat * point
-        //                 x
-        //                 y
-        //                 z
-        //                 1
-        // 0  1  2  3
-        // 4  5  6  7
-        // 8  9  10 11
-        // 12 13 14 15
-        var x = (p.x * P.m[0]) + (p.y * P.m[1]) + (p.z * P.m[2]) + P.m[3];
-        var y = (p.x * P.m[4]) + (p.y * P.m[5]) + (p.z * P.m[6]) + P.m[7];
-        var z = (p.x * P.m[8]) + (p.y * P.m[9]) + (p.z * P.m[10]) + P.m[11];
-        var w = (p.x * P.m[12]) + (p.y * P.m[13]) + (p.z * P.m[14]) + P.m[15];
-        return new Vector3(x / w, y / w, z / w);
     };
     return Vector3;
 })();
@@ -349,13 +337,29 @@ var SoftEngine;
             var ex = this.interpolate(pc.x, pd.x, gradient2) >> 0;
             var z1 = this.interpolate(pa.z, pb.z, gradient1); 
             var z2 = this.interpolate(pc.z, pd.z, gradient2);
-            var v1Normal = va.Normal.scale(1 - gradient1).add(vb.Normal.scale(gradient1));
-            var v2Normal = vc.Normal.scale(1 - gradient2).add(vd.Normal.scale(gradient2));
+            var u;
+            if (pa.z === pb.z) {
+                u = gradient1;
+            } else {
+                u = (((1 / z1) - (1 / pa.z)) / ((1 / pb.z) - (1 / pa.z)));
+            }
+            var v1Normal = va.Normal.scale(1 - u).add(vb.Normal.scale(u));
+            if (pc.z === pd.z) {
+                u = gradient2;
+            } else {
+                u = (((1 / z2) - (1 / pc.z)) / ((1 / pd.z) - (1 / pc.z)));
+            }
+            var v2Normal = vc.Normal.scale(1 - u).add(vd.Normal.scale(u));
             for (var x = sx; x < ex; x++) {
                 var gradient = (x - sx) / (ex - sx);
                 var z = this.interpolate(z1, z2, gradient);
+                if (z1 === z2) {
+                    u = gradient;
+                } else {
+                    u = (((1 / z) - (1 / z1)) / ((1 / z2) - (1 / z1)));
+                }
                 var currentPoint = new Vector3(x, currentY, z);
-                var v3Normal = v1Normal.scale(1 - gradient).add(v2Normal.scale(gradient));
+                var v3Normal = v1Normal.scale(1 - u).add(v2Normal.scale(u));
                 var lightDirection = this.getLightDirection(currentPoint);
                 var Id = this.computeDiffusionReflection(v3Normal, lightDirection);
                 var Is = this.computeSpecularReflection(currentPoint, v3Normal, lightDirection);
